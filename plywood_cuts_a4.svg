@@ -20,10 +20,10 @@
   </style>
 <rect x="0" y="0" width="210.0" height="13" fill="#1a2b3c"/>
 <text x="105.0" y="6" text-anchor="middle" class="ttl">ВЫПИЛЫ ИЗ ФАНЕРЫ 18 мм</text>
-<text x="105.0" y="10" text-anchor="middle" class="sub">Ньютон 200/1200 Dobson · Stellafane-стиль · масштаб видов 1:8 · размеры в мм</text>
+<text x="105.0" y="10" text-anchor="middle" class="sub">Ньютон 200/1200 Dobson · Stellafane-стиль · масштаб видов 1:10 · размеры в мм</text>
 <rect x="0" y="14" width="210.0" height="4.5" class="secbar"/>
-<text x="3" y="17.3" class="sech">1.  ОПРАВА ЗЕРКАЛА (Seronik-style)  ·  2 детали  ·  лист 60×120</text>
-<g transform="translate(50,50)"><g transform="scale(0.125)">
+<text x="3" y="17.3" class="sech">1.  ОПРАВА ЗЕРКАЛА (Seronik-style)  ·  2 детали</text>
+<g transform="translate(50,38)"><g transform="scale(0.1)">
 <circle cx="0" cy="0" r="107.5" class="part"/>
 <circle cx="0" cy="0" r="30.0" class="vent"/>
 <circle cx="0.00" cy="-71.00" r="3.0" class="hole"/>
@@ -35,13 +35,13 @@
 <line x1="-104.5" y1="0" x2="104.5" y2="0" class="axisL"/>
 <line x1="0" y1="-104.5" x2="0" y2="104.5" class="axisL"/>
 </g>
-<text x="0" y="-19" text-anchor="middle" class="lbl">Передняя пластина</text>
-<text x="0" y="-16" text-anchor="middle" class="qty">1 шт</text>
-<text x="0" y="20" text-anchor="middle" class="dim">круг Ø 215  ·  вент. отв. Ø 60 в центре</text>
-<text x="0" y="23" text-anchor="middle" class="ds">3 нажимных Ø 6 на R=71 (по ушам Y, через 120°)</text>
-<text x="0" y="25.5" text-anchor="middle" class="ds">3 прижимных Ø 6 на R=56 (между нажимными)</text>
+<text x="0" y="-15" text-anchor="middle" class="lbl">Передняя пластина</text>
+<text x="0" y="-12" text-anchor="middle" class="qty">1 шт</text>
+<text x="0" y="16" text-anchor="middle" class="dim">круг Ø 215  ·  вент. отв. Ø 60</text>
+<text x="0" y="19" text-anchor="middle" class="ds">3 нажимных Ø 6 на R=71 (по ушам Y)</text>
+<text x="0" y="21.5" text-anchor="middle" class="ds">3 прижимных Ø 6 на R=56 (между ними)</text>
 </g>
-<g transform="translate(155,50)"><g transform="scale(0.125)">
+<g transform="translate(155,38)"><g transform="scale(0.1)">
 <circle cx="0" cy="0" r="125.0" class="env"/>
 <path d="M 74.68,-43.12 A 75,75 0 1,0 -74.68,-43.12 A 75,75 0 1,0 0,86.24 A 75,75 0 1,0 74.68,-43.12 Z" class="part"/>
 <circle cx="0.00" cy="-71.00" r="3.0" class="hole"/>
@@ -56,15 +56,15 @@
 <line x1="-20" y1="0" x2="20" y2="0" class="axisL"/>
 <line x1="0" y1="-20" x2="0" y2="20" class="axisL"/>
 </g>
-<text x="0" y="-19" text-anchor="middle" class="lbl">Задняя Y-пластина</text>
-<text x="0" y="-16" text-anchor="middle" class="qty">1 шт</text>
-<text x="0" y="22" text-anchor="middle" class="dim">3 уха вписаны в Ø 250 (= ID трубы)</text>
-<text x="0" y="25" text-anchor="middle" class="ds">6 сквозных Ø 6 совпадают с передней пластиной</text>
-<text x="0" y="27.5" text-anchor="middle" class="ds">3 отв. Ø 5 в ушах (R=115) под шурупы к трубе</text>
+<text x="0" y="-15" text-anchor="middle" class="lbl">Задняя Y-пластина</text>
+<text x="0" y="-12" text-anchor="middle" class="qty">1 шт</text>
+<text x="0" y="16" text-anchor="middle" class="dim">3 уха вписаны в Ø 250 (= ID трубы)</text>
+<text x="0" y="19" text-anchor="middle" class="ds">6 сквозных Ø 6 (совпадают с передней)</text>
+<text x="0" y="21.5" text-anchor="middle" class="ds">3 отв. Ø 5 в ушах (R=115) под шурупы</text>
 </g>
-<rect x="0" y="80" width="210.0" height="4.5" class="secbar"/>
-<text x="3" y="83.3" class="sech">2.  ЛЮЛЬКА (кольца+бруски) + ВЫСОТНЫЕ ПОДШИПНИКИ  ·  лист 60×120</text>
-<g transform="translate(50,115)"><g transform="scale(0.125)">
+<rect x="0" y="64" width="210.0" height="4.5" class="secbar"/>
+<text x="3" y="67.3" class="sech">2.  ЛЮЛЬКА (кольца+бруски) + ВЫСОТНЫЕ ПОДШИПНИКИ  ·  3 детали</text>
+<g transform="translate(50,97)"><g transform="scale(0.1)">
 <circle cx="0" cy="0" r="160.0" class="part"/>
 <circle cx="0" cy="0" r="131.0" fill="white" stroke="#2c3e50" stroke-width="0.5"/>
 <circle cx="102.88" cy="102.88" r="2.0" class="hole"/>
@@ -74,103 +74,105 @@
 <line x1="-20" y1="0" x2="20" y2="0" class="axisL"/>
 <line x1="0" y1="-20" x2="0" y2="20" class="axisL"/>
 </g>
-<text x="0" y="-23" text-anchor="middle" class="lbl">Кольцо люльки</text>
-<text x="0" y="-20" text-anchor="middle" class="qty">2 шт (одинаковые)</text>
-<text x="0" y="23" text-anchor="middle" class="dim">OD 320  ·  ID 262 (= труба + 4мм)</text>
-<text x="0" y="26" text-anchor="middle" class="ds">4 отв. Ø 4 на R=146 (по углам, под брус 30×30)</text>
-<text x="0" y="28.5" text-anchor="middle" class="src">2 кольца соединить брусками 30×30×300мм (= длина люльки)</text>
+<text x="0" y="-21" text-anchor="middle" class="lbl">Кольцо люльки</text>
+<text x="0" y="-18" text-anchor="middle" class="qty">2 шт (одинаковые)</text>
+<text x="0" y="21" text-anchor="middle" class="dim">OD 320  ·  ID 262 (= труба + 4мм)</text>
+<text x="0" y="23.5" text-anchor="middle" class="ds">4 отв. Ø 4 на R=146 (под брус 30×30)</text>
+<text x="0" y="26" text-anchor="middle" class="src">2 кольца соединить брусками 30×30×400мм</text>
 </g>
-<g transform="translate(155,115)"><g transform="scale(0.125)">
-<circle cx="0" cy="0" r="190.0" class="part"/>
-<line x1="-195.0" y1="0" x2="195.0" y2="0" class="ftLn"/>
-<circle cx="-116.67" cy="-116.67" r="2.0" class="hole"/>
-<circle cx="0.00" cy="-165.00" r="2.0" class="hole"/>
-<circle cx="116.67" cy="-116.67" r="2.0" class="hole"/>
-<circle cx="-116.67" cy="116.67" r="2.0" class="hole"/>
-<circle cx="0.00" cy="165.00" r="2.0" class="hole"/>
-<circle cx="116.67" cy="116.67" r="2.0" class="hole"/>
+<g transform="translate(155,97)"><g transform="scale(0.1)">
+<circle cx="0" cy="0" r="220.0" class="part"/>
+<line x1="-225.0" y1="0" x2="225.0" y2="0" class="ftLn"/>
+<circle cx="-134.35" cy="-134.35" r="2.0" class="hole"/>
+<circle cx="0.00" cy="-190.00" r="2.0" class="hole"/>
+<circle cx="134.35" cy="-134.35" r="2.0" class="hole"/>
+<circle cx="-134.35" cy="134.35" r="2.0" class="hole"/>
+<circle cx="0.00" cy="190.00" r="2.0" class="hole"/>
+<circle cx="134.35" cy="134.35" r="2.0" class="hole"/>
 </g>
 <text x="0" y="-27" text-anchor="middle" class="lbl">Диск подшипников</text>
 <text x="0" y="-24" text-anchor="middle" class="qty">1 диск → 2 полукруга</text>
-<text x="0" y="27" text-anchor="middle" class="dim">круг Ø 380 (= 1.47×OD трубы)</text>
+<text x="0" y="27" text-anchor="middle" class="dim">круг Ø 440 (= 1.7×OD трубы)</text>
 <text x="0" y="30" text-anchor="middle" class="ds">распилить пополам → 2 полукруглых подшипника</text>
 <text x="0" y="32.5" text-anchor="middle" class="ds">3 отв. Ø 4 в каждой половине к боку люльки</text>
 <text x="0" y="35" text-anchor="middle" class="src">обклеить торец PTFE-полосой 25 мм</text>
 </g>
-<rect x="0" y="150" width="210.0" height="4.5" class="secbar"/>
-<text x="3" y="153.3" class="sech">3.  РОКЕР-БОКС  ·  4 детали  ·  лист 80×120</text>
-<g transform="translate(45,195)"><g transform="scale(0.125)">
-<path d="M -155.0,-190.0 A 192.0,192.0 0 0,0 155.0,-190.0 L 155.0,190.0 L -155.0,190.0 Z" class="part"/>
-<circle cx="123.42" cy="-156.23" r="10" class="hole"/>
-<circle cx="-123.42" cy="-156.23" r="10" class="hole"/>
+<rect x="0" y="135" width="210.0" height="4.5" class="secbar"/>
+<text x="3" y="138.3" class="sech">3.  РОКЕР-БОКС  ·  4 детали</text>
+<g transform="translate(35,175)"><g transform="scale(0.1)">
+<path d="M -155.0,-300.0 A 222.0,222.0 0 0,0 155.0,-300.0 L 155.0,300.0 L -155.0,300.0 Z" class="part"/>
+<circle cx="142.70" cy="-288.87" r="10" class="hole"/>
+<circle cx="-142.70" cy="-288.87" r="10" class="hole"/>
 <line x1="-15" y1="0" x2="15" y2="0" class="axisL"/>
 <line x1="0" y1="-15" x2="0" y2="15" class="axisL"/>
-<line x1="0" y1="-111.31" x2="0" y2="185.0" class="axisL"/>
+<line x1="0" y1="-236.93" x2="0" y2="295.0" class="axisL"/>
 </g>
-<text x="0" y="-29" text-anchor="middle" class="lbl">Боковая стенка</text>
-<text x="0" y="-26" text-anchor="middle" class="qty">2 шт</text>
-<text x="0" y="27" text-anchor="middle" class="dim">310 × 380</text>
-<text x="0" y="29.5" text-anchor="middle" class="ds">вырез R=192, глубина ≈ 79 мм</text>
-<text x="0" y="32" text-anchor="middle" class="ds">2 PTFE-пятака через 80° на дуге</text>
+<text x="0" y="-33" text-anchor="middle" class="lbl">Боковая стенка</text>
+<text x="0" y="-30" text-anchor="middle" class="qty">2 шт</text>
+<text x="0" y="33" text-anchor="middle" class="dim">310 × 600</text>
+<text x="0" y="35.5" text-anchor="middle" class="ds">вырез R=222, глубина ≈ 63мм</text>
+<text x="0" y="38" text-anchor="middle" class="ds">2 PTFE через 80° на дуге</text>
 </g>
-<g transform="translate(105,195)"><g transform="scale(0.125)">
-<rect x="-175.0" y="-175.0" width="350" height="350" class="part"/>
-<circle cx="-160" cy="-160" r="2.5" class="hole"/>
-<circle cx="-160" cy="160" r="2.5" class="hole"/>
-<circle cx="160" cy="-160" r="2.5" class="hole"/>
-<circle cx="160" cy="160" r="2.5" class="hole"/>
+<g transform="translate(105,175)"><g transform="scale(0.1)">
+<rect x="-175.0" y="-250.0" width="350" height="500" class="part"/>
+<circle cx="-160" cy="-235" r="2.5" class="hole"/>
+<circle cx="-160" cy="235" r="2.5" class="hole"/>
+<circle cx="160" cy="-235" r="2.5" class="hole"/>
+<circle cx="160" cy="235" r="2.5" class="hole"/>
 </g>
-<text x="0" y="-25" text-anchor="middle" class="lbl">Передняя стенка</text>
-<text x="0" y="-22" text-anchor="middle" class="qty">1 шт</text>
-<text x="0" y="25" text-anchor="middle" class="dim">350 × 350</text>
-<text x="0" y="28" text-anchor="middle" class="ds">саморезы в торец боковин (4×60)</text>
+<text x="0" y="-29" text-anchor="middle" class="lbl">Передняя стенка</text>
+<text x="0" y="-26" text-anchor="middle" class="qty">1 шт</text>
+<text x="0" y="29" text-anchor="middle" class="dim">350 × 500</text>
+<text x="0" y="31.5" text-anchor="middle" class="ds">саморезы в торец боковин (4×60)</text>
 </g>
-<g transform="translate(170,195)"><g transform="scale(0.125)">
-<circle cx="0" cy="0" r="190.0" class="part"/>
+<g transform="translate(175,175)"><g transform="scale(0.1)">
+<circle cx="0" cy="0" r="235.0" class="part"/>
 <circle cx="0" cy="0" r="5.0" class="hole"/>
 <line x1="-15" y1="0" x2="15" y2="0" class="axisL"/>
 <line x1="0" y1="-15" x2="0" y2="15" class="axisL"/>
 </g>
-<text x="0" y="-28" text-anchor="middle" class="lbl">Дно рокера (круг!)</text>
-<text x="0" y="-25" text-anchor="middle" class="qty">1 шт</text>
-<text x="0" y="28" text-anchor="middle" class="dim">круг Ø 380</text>
-<text x="0" y="31" text-anchor="middle" class="ds">центр Ø 10 под M10 (сверлить вместе с ground board)</text>
+<text x="0" y="-27" text-anchor="middle" class="lbl">Дно рокера (круг)</text>
+<text x="0" y="-24" text-anchor="middle" class="qty">1 шт</text>
+<text x="0" y="27" text-anchor="middle" class="dim">круг Ø 470</text>
+<text x="0" y="29.5" text-anchor="middle" class="ds">центр Ø 10 под M10</text>
+<text x="0" y="32" text-anchor="middle" class="src">сверлить вместе с ground board</text>
 </g>
-<rect x="0" y="232" width="210.0" height="4.5" class="secbar"/>
-<text x="3" y="235.3" class="sech">4.  GROUND BOARD (опорная плита)  ·  1 деталь  ·  лист 80×120</text>
-<g transform="translate(50,265)"><g transform="scale(0.1)">
-<circle cx="0" cy="0" r="200.0" class="part"/>
+<rect x="0" y="220" width="210.0" height="4.5" class="secbar"/>
+<text x="3" y="223.3" class="sech">4.  GROUND BOARD (опорная плита)  ·  1 деталь</text>
+<g transform="translate(50,257)"><g transform="scale(0.1)">
+<circle cx="0" cy="0" r="250.0" class="part"/>
 <circle cx="0" cy="0" r="5.0" class="hole"/>
-<circle cx="0.00" cy="-150.00" r="10" class="hole"/>
-<circle cx="129.90" cy="75.00" r="10" class="hole"/>
-<circle cx="-129.90" cy="75.00" r="10" class="hole"/>
-<circle cx="147.22" cy="-85.00" r="15" fill="none" stroke="#888" stroke-width="0.7" stroke-dasharray="3,2"/>
-<circle cx="0.00" cy="170.00" r="15" fill="none" stroke="#888" stroke-width="0.7" stroke-dasharray="3,2"/>
-<circle cx="-147.22" cy="-85.00" r="15" fill="none" stroke="#888" stroke-width="0.7" stroke-dasharray="3,2"/>
+<circle cx="0.00" cy="-205.00" r="10" class="hole"/>
+<circle cx="177.54" cy="102.50" r="10" class="hole"/>
+<circle cx="-177.54" cy="102.50" r="10" class="hole"/>
+<circle cx="190.53" cy="-110.00" r="15" fill="none" stroke="#888" stroke-width="0.7" stroke-dasharray="3,2"/>
+<circle cx="0.00" cy="220.00" r="15" fill="none" stroke="#888" stroke-width="0.7" stroke-dasharray="3,2"/>
+<circle cx="-190.53" cy="-110.00" r="15" fill="none" stroke="#888" stroke-width="0.7" stroke-dasharray="3,2"/>
 <line x1="-20" y1="0" x2="20" y2="0" class="axisL"/>
 <line x1="0" y1="-20" x2="0" y2="20" class="axisL"/>
 </g>
-<text x="0" y="-23" text-anchor="middle" class="lbl">Ground board · 1 шт</text>
-<text x="0" y="24" text-anchor="middle" class="dim">круг Ø 400</text>
-<text x="0" y="26.5" text-anchor="middle" class="ds">центр Ø 10 под ось M10</text>
-<text x="0" y="29" text-anchor="middle" class="ds">3 PTFE на R=150 через 120°</text>
-<text x="0" y="31.5" text-anchor="middle" class="src">пунктир — 3 рез. ножки на R=170</text>
+<text x="0" y="-29" text-anchor="middle" class="lbl">Ground board · 1 шт</text>
+<text x="0" y="29" text-anchor="middle" class="dim">круг Ø 500</text>
+<text x="0" y="31.5" text-anchor="middle" class="ds">центр Ø 10 под ось M10</text>
+<text x="0" y="34" text-anchor="middle" class="ds">3 PTFE на R=205 через 120°</text>
+<text x="0" y="36.5" text-anchor="middle" class="src">пунктир — 3 рез. ножки на R=220</text>
 </g>
-<g transform="translate(105,243)">
-<text x="0" y="0" class="lbl">ОТЛИЧИЯ от предыдущей версии:</text>
-<text x="0" y="4.5" class="ds">• Подшипники: 1 диск Ø380 распилен пополам</text>
-<text x="0" y="7" class="ds">  (вместо 2 кружков Ø200 — слишком мало;</text>
-<text x="0" y="9.5" class="ds">  правило Stellafane: 1.2-1.8 × OD трубы)</text>
-<text x="0" y="13" class="ds">• Дно рокера КРУГ Ø 380 (был квадрат)</text>
-<text x="0" y="16" class="ds">• Ground board КРУГ Ø 400 (был квадрат)</text>
-<text x="0" y="19" class="ds">• Вырез боковины рокера — теперь вниз ✓</text>
-<text x="0" y="22" class="ds">• Y-пластина: 6 сквозных болтовых отв.</text>
-<text x="0" y="24.5" class="ds">  (раньше совсем отсутствовали)</text>
-<text x="0" y="28" class="src">Формулы: stellafane.org/tm/dob/mount/</text>
-<text x="0" y="30.5" class="src">Цели: mirror 8" / sonotube ID250 OD258 / 18мм ply</text>
+<g transform="translate(110,232)">
+<text x="0" y="0" class="lbl">РАЗМЕРЫ ПО STELLAFANE (полные, без компромиссов):</text>
+<text x="0" y="4.5" class="ds">• Подшипники: 1 диск Ø 440 (= 1.7×OD трубы)</text>
+<text x="0" y="7" class="ds">  распилить пополам → 2 полукруглых</text>
+<text x="0" y="10" class="ds">• Рокер высокий 600мм (балансная точка + 70мм)</text>
+<text x="0" y="12.5" class="ds">• Передняя стенка 350×500</text>
+<text x="0" y="15" class="ds">• Дно рокера круг Ø 470</text>
+<text x="0" y="17.5" class="ds">• Ground board круг Ø 500</text>
+<text x="0" y="20.5" class="ds">Сумма площади всех деталей ≈ 1.5 м².</text>
+<text x="0" y="23" class="ds">Помещается на одном листе 1500×1500 или</text>
+<text x="0" y="25.5" class="ds">1220×2440 (стандартный 4'×8').</text>
+<text x="0" y="29" class="src">Формулы: stellafane.org/tm/dob/mount/cut.html</text>
+<text x="0" y="31.5" class="src">Цели: mirror 8" / труба ID250 OD258 / 18мм ply</text>
 </g>
 <rect x="0" y="287" width="210.0" height="10" fill="#ecf0f1"/>
 <text x="3" y="291" class="nt" font-weight="bold" fill="#222">Замечания:</text>
-<text x="3" y="294" class="nt">• Размеры компромиссные — влезает на 60×120 + 80×120. Для более просторного рокера — лист 100×150.</text>
-<text x="3" y="296.8" class="nt">• Дно рокера и ground board сверлить Ø10 совместно — точная соосность оси. Кромки P120→P400.</text>
+<text x="3" y="294" class="nt">• Дно рокера и ground board сверлить Ø10 совместно (=одной операцией) — иначе ось не сойдётся.</text>
+<text x="3" y="296.8" class="nt">• Кромки P120 → P400. На торец подшипников и рокер-выреза наклеить PTFE (или Ebony Star) — это азимут. подшипник.</text>
 </svg>

@@ -33,33 +33,34 @@ BATTEN_HOLE_R = (CRADLE_ID + CRADLE_OD)/4  # 145.5
 BATTEN_HOLE_D = 4
 CRADLE_LENGTH_MM = 300               # batten length
 
-# Side bearings (Stellafane: 1 disk halved → 2 semicircles)
-BEARING_D = 380                      # 1.47 × TUBE_OD, in 1.2-1.8 range
-BEARING_SCREW_R = BEARING_D/2 - 25    # 165
+# Side bearings (Stellafane: 1 disk halved → 2 semicircles; Kriege&Berry: 1.7×OD)
+BEARING_D = 440                      # = round(1.7 × TUBE_OD) — full Stellafane recommendation
+BEARING_SCREW_R = BEARING_D/2 - 30    # 190 — near rim
 BEARING_SCREW_D = 4
 
-# Rocker box (compromised to fit 80×120 sheet)
+# Rocker box (Stellafane proper, no compromise)
 ROCKER_SIDE_W = 310                  # 1.2 × TUBE_OD, along tube axis
-ROCKER_SIDE_H = 380                  # height (Stellafane suggests 600 but tight on sheet)
-SIDE_CUTOUT_R = BEARING_D/2 + 2      # 192 (bearing radius + 2mm laminate)
+ROCKER_SIDE_H = 600                  # ≈ balance_point(530) + 70mm — Stellafane formula
+SIDE_CUTOUT_R = BEARING_D/2 + 2      # 222 (bearing radius + 2mm laminate)
 SIDE_CUTOUT_CHORD = ROCKER_SIDE_W    # 310 — full side wall width
-SIDE_CUTOUT_DEPTH = SIDE_CUTOUT_R - math.sqrt(SIDE_CUTOUT_R**2 - (SIDE_CUTOUT_CHORD/2)**2)  # ~79mm
-PTFE_ANGLE_DEG = 40                  # PTFE pads at ±40° from cutout bottom (inside the chord ends)
+SIDE_CUTOUT_DEPTH = SIDE_CUTOUT_R - math.sqrt(SIDE_CUTOUT_R**2 - (SIDE_CUTOUT_CHORD/2)**2)  # ~63mm
+PTFE_ANGLE_DEG = 40                  # PTFE pads at ±40° from cutout bottom
 
-ROCKER_FRONT_W = 350                 # ширина передней (по перпендикуляру к оси трубы)
-ROCKER_FRONT_H = 350
+ROCKER_FRONT_W = 350                 # = cradle_width(270) + ~80mm for mounting
+ROCKER_FRONT_H = 500                 # slightly less than side wall (как у Stellafane: 23"/24")
 
-# Bottom + ground (Stellafane: circles)
-BOTTOM_D = 380                       # rocker bottom diameter
-GROUND_D = 400                       # ground board diameter
+# Bottom + ground (Stellafane: round)
+# Bottom Ø = round-up(diagonal of footprint width×depth)
+BOTTOM_D = math.ceil(math.sqrt(ROCKER_FRONT_W**2 + ROCKER_SIDE_W**2) / 10) * 10  # =470
+GROUND_D = BOTTOM_D + 30             # 500 — slightly larger for foot reach
 AZIMUTH_BOLT_D = 10                  # M10
-PTFE_R_GROUND = 150                  # PTFE pads radius on ground board
-FEET_R_GROUND = 170                  # rubber feet radius
+PTFE_R_GROUND = BOTTOM_D/2 - 30      # 205 — PTFE pads (rocker rolls on them)
+FEET_R_GROUND = GROUND_D/2 - 30      # 220 — rubber feet at edge
 
 # ============ DRAWING PARAMETERS ============
 PAGE_W = 210.0  # mm A4
 PAGE_H = 297.0
-SCALE = 0.125   # 1:8 — visual scale for parts on the page
+SCALE = 0.10    # 1:10 — visual scale (Stellafane-proper sizes are bigger, need smaller scale)
 
 def mm(v):
     """Scale a real-mm value to visual page mm."""
@@ -287,124 +288,124 @@ def build_svg():
     # Header bar
     out += f'<rect x="0" y="0" width="{PAGE_W}" height="13" fill="#1a2b3c"/>\n'
     out += f'<text x="{PAGE_W/2}" y="6" text-anchor="middle" class="ttl">ВЫПИЛЫ ИЗ ФАНЕРЫ 18 мм</text>\n'
-    out += f'<text x="{PAGE_W/2}" y="10" text-anchor="middle" class="sub">Ньютон 200/1200 Dobson · Stellafane-стиль · масштаб видов 1:8 · размеры в мм</text>\n'
+    out += f'<text x="{PAGE_W/2}" y="10" text-anchor="middle" class="sub">Ньютон 200/1200 Dobson · Stellafane-стиль · масштаб видов 1:{int(1/SCALE)} · размеры в мм</text>\n'
 
     # ===== SECTION 1: MIRROR CELL =====
-    out += section_bar(14, '1.  ОПРАВА ЗЕРКАЛА (Seronik-style)  ·  2 детали  ·  лист 60×120')
-    # Front plate at (50, 50)
-    out += f'<g transform="translate(50,50)"><g transform="scale({SCALE})">\n'
+    out += section_bar(14, '1.  ОПРАВА ЗЕРКАЛА (Seronik-style)  ·  2 детали')
+    # Front plate at (50, 38)
+    out += f'<g transform="translate(50,38)"><g transform="scale({SCALE})">\n'
     out += front_plate_inner()
     out += '</g>\n'
-    out += '<text x="0" y="-19" text-anchor="middle" class="lbl">Передняя пластина</text>\n'
-    out += '<text x="0" y="-16" text-anchor="middle" class="qty">1 шт</text>\n'
-    out += '<text x="0" y="20" text-anchor="middle" class="dim">круг Ø 215  ·  вент. отв. Ø 60 в центре</text>\n'
-    out += f'<text x="0" y="23" text-anchor="middle" class="ds">3 нажимных Ø 6 на R=71 (по ушам Y, через 120°)</text>\n'
-    out += f'<text x="0" y="25.5" text-anchor="middle" class="ds">3 прижимных Ø 6 на R=56 (между нажимными)</text>\n'
+    out += '<text x="0" y="-15" text-anchor="middle" class="lbl">Передняя пластина</text>\n'
+    out += '<text x="0" y="-12" text-anchor="middle" class="qty">1 шт</text>\n'
+    out += '<text x="0" y="16" text-anchor="middle" class="dim">круг Ø 215  ·  вент. отв. Ø 60</text>\n'
+    out += '<text x="0" y="19" text-anchor="middle" class="ds">3 нажимных Ø 6 на R=71 (по ушам Y)</text>\n'
+    out += '<text x="0" y="21.5" text-anchor="middle" class="ds">3 прижимных Ø 6 на R=56 (между ними)</text>\n'
     out += '</g>\n'
 
-    # Y-plate at (155, 50)
-    out += f'<g transform="translate(155,50)"><g transform="scale({SCALE})">\n'
+    # Y-plate at (155, 38)
+    out += f'<g transform="translate(155,38)"><g transform="scale({SCALE})">\n'
     out += y_plate_inner()
     out += '</g>\n'
-    out += '<text x="0" y="-19" text-anchor="middle" class="lbl">Задняя Y-пластина</text>\n'
-    out += '<text x="0" y="-16" text-anchor="middle" class="qty">1 шт</text>\n'
-    out += f'<text x="0" y="22" text-anchor="middle" class="dim">3 уха вписаны в Ø 250 (= ID трубы)</text>\n'
-    out += f'<text x="0" y="25" text-anchor="middle" class="ds">6 сквозных Ø 6 совпадают с передней пластиной</text>\n'
-    out += f'<text x="0" y="27.5" text-anchor="middle" class="ds">3 отв. Ø 5 в ушах (R=115) под шурупы к трубе</text>\n'
+    out += '<text x="0" y="-15" text-anchor="middle" class="lbl">Задняя Y-пластина</text>\n'
+    out += '<text x="0" y="-12" text-anchor="middle" class="qty">1 шт</text>\n'
+    out += '<text x="0" y="16" text-anchor="middle" class="dim">3 уха вписаны в Ø 250 (= ID трубы)</text>\n'
+    out += '<text x="0" y="19" text-anchor="middle" class="ds">6 сквозных Ø 6 (совпадают с передней)</text>\n'
+    out += '<text x="0" y="21.5" text-anchor="middle" class="ds">3 отв. Ø 5 в ушах (R=115) под шурупы</text>\n'
     out += '</g>\n'
 
     # ===== SECTION 2: CRADLE + BEARINGS =====
-    out += section_bar(80, '2.  ЛЮЛЬКА (кольца+бруски) + ВЫСОТНЫЕ ПОДШИПНИКИ  ·  лист 60×120')
-    # Cradle ring at (50, 115)
-    out += f'<g transform="translate(50,115)"><g transform="scale({SCALE})">\n'
+    out += section_bar(64, '2.  ЛЮЛЬКА (кольца+бруски) + ВЫСОТНЫЕ ПОДШИПНИКИ  ·  3 детали')
+    # Cradle ring at (50, 97)
+    out += f'<g transform="translate(50,97)"><g transform="scale({SCALE})">\n'
     out += cradle_ring_inner()
     out += '</g>\n'
-    out += '<text x="0" y="-23" text-anchor="middle" class="lbl">Кольцо люльки</text>\n'
-    out += '<text x="0" y="-20" text-anchor="middle" class="qty">2 шт (одинаковые)</text>\n'
-    out += f'<text x="0" y="23" text-anchor="middle" class="dim">OD 320  ·  ID 262 (= труба + 4мм)</text>\n'
-    out += '<text x="0" y="26" text-anchor="middle" class="ds">4 отв. Ø 4 на R=146 (по углам, под брус 30×30)</text>\n'
-    out += '<text x="0" y="28.5" text-anchor="middle" class="src">2 кольца соединить брусками 30×30×300мм (= длина люльки)</text>\n'
+    out += '<text x="0" y="-21" text-anchor="middle" class="lbl">Кольцо люльки</text>\n'
+    out += '<text x="0" y="-18" text-anchor="middle" class="qty">2 шт (одинаковые)</text>\n'
+    out += '<text x="0" y="21" text-anchor="middle" class="dim">OD 320  ·  ID 262 (= труба + 4мм)</text>\n'
+    out += '<text x="0" y="23.5" text-anchor="middle" class="ds">4 отв. Ø 4 на R=146 (под брус 30×30)</text>\n'
+    out += '<text x="0" y="26" text-anchor="middle" class="src">2 кольца соединить брусками 30×30×400мм</text>\n'
     out += '</g>\n'
 
-    # Bearing disk at (155, 115)
-    out += f'<g transform="translate(155,115)"><g transform="scale({SCALE})">\n'
+    # Bearing disk at (155, 97)
+    out += f'<g transform="translate(155,97)"><g transform="scale({SCALE})">\n'
     out += bearing_disk_inner()
     out += '</g>\n'
     out += '<text x="0" y="-27" text-anchor="middle" class="lbl">Диск подшипников</text>\n'
     out += '<text x="0" y="-24" text-anchor="middle" class="qty">1 диск → 2 полукруга</text>\n'
-    out += f'<text x="0" y="27" text-anchor="middle" class="dim">круг Ø 380 (= 1.47×OD трубы)</text>\n'
+    out += f'<text x="0" y="27" text-anchor="middle" class="dim">круг Ø {BEARING_D:.0f} (= 1.7×OD трубы)</text>\n'
     out += '<text x="0" y="30" text-anchor="middle" class="ds">распилить пополам → 2 полукруглых подшипника</text>\n'
     out += '<text x="0" y="32.5" text-anchor="middle" class="ds">3 отв. Ø 4 в каждой половине к боку люльки</text>\n'
     out += '<text x="0" y="35" text-anchor="middle" class="src">обклеить торец PTFE-полосой 25 мм</text>\n'
     out += '</g>\n'
 
     # ===== SECTION 3: ROCKER BOX =====
-    out += section_bar(150, '3.  РОКЕР-БОКС  ·  4 детали  ·  лист 80×120')
-    # Side wall at (45, 195)
-    out += f'<g transform="translate(45,195)"><g transform="scale({SCALE})">\n'
+    out += section_bar(135, '3.  РОКЕР-БОКС  ·  4 детали')
+    # Side wall at (35, 175): 310×600 at 1:10 = 31×60mm
+    out += f'<g transform="translate(35,175)"><g transform="scale({SCALE})">\n'
     out += rocker_side_inner()
     out += '</g>\n'
-    out += '<text x="0" y="-29" text-anchor="middle" class="lbl">Боковая стенка</text>\n'
-    out += '<text x="0" y="-26" text-anchor="middle" class="qty">2 шт</text>\n'
-    out += f'<text x="0" y="27" text-anchor="middle" class="dim">310 × 380</text>\n'
-    out += f'<text x="0" y="29.5" text-anchor="middle" class="ds">вырез R=192, глубина ≈ 79 мм</text>\n'
-    out += '<text x="0" y="32" text-anchor="middle" class="ds">2 PTFE-пятака через 80° на дуге</text>\n'
+    out += '<text x="0" y="-33" text-anchor="middle" class="lbl">Боковая стенка</text>\n'
+    out += '<text x="0" y="-30" text-anchor="middle" class="qty">2 шт</text>\n'
+    out += f'<text x="0" y="33" text-anchor="middle" class="dim">{ROCKER_SIDE_W:.0f} × {ROCKER_SIDE_H:.0f}</text>\n'
+    out += f'<text x="0" y="35.5" text-anchor="middle" class="ds">вырез R={SIDE_CUTOUT_R:.0f}, глубина ≈ {SIDE_CUTOUT_DEPTH:.0f}мм</text>\n'
+    out += '<text x="0" y="38" text-anchor="middle" class="ds">2 PTFE через 80° на дуге</text>\n'
     out += '</g>\n'
 
-    # Front wall at (105, 195)
-    out += f'<g transform="translate(105,195)"><g transform="scale({SCALE})">\n'
+    # Front wall at (105, 175): 350×500 at 1:10 = 35×50
+    out += f'<g transform="translate(105,175)"><g transform="scale({SCALE})">\n'
     out += rocker_front_inner()
     out += '</g>\n'
-    out += '<text x="0" y="-25" text-anchor="middle" class="lbl">Передняя стенка</text>\n'
-    out += '<text x="0" y="-22" text-anchor="middle" class="qty">1 шт</text>\n'
-    out += '<text x="0" y="25" text-anchor="middle" class="dim">350 × 350</text>\n'
-    out += '<text x="0" y="28" text-anchor="middle" class="ds">саморезы в торец боковин (4×60)</text>\n'
+    out += '<text x="0" y="-29" text-anchor="middle" class="lbl">Передняя стенка</text>\n'
+    out += '<text x="0" y="-26" text-anchor="middle" class="qty">1 шт</text>\n'
+    out += f'<text x="0" y="29" text-anchor="middle" class="dim">{ROCKER_FRONT_W:.0f} × {ROCKER_FRONT_H:.0f}</text>\n'
+    out += '<text x="0" y="31.5" text-anchor="middle" class="ds">саморезы в торец боковин (4×60)</text>\n'
     out += '</g>\n'
 
-    # Bottom at (170, 195) — circle
-    out += f'<g transform="translate(170,195)"><g transform="scale({SCALE})">\n'
+    # Bottom at (175, 175): circle Ø470 at 1:10 = 47mm
+    out += f'<g transform="translate(175,175)"><g transform="scale({SCALE})">\n'
     out += rocker_bottom_inner()
     out += '</g>\n'
-    out += '<text x="0" y="-28" text-anchor="middle" class="lbl">Дно рокера (круг!)</text>\n'
-    out += '<text x="0" y="-25" text-anchor="middle" class="qty">1 шт</text>\n'
-    out += '<text x="0" y="28" text-anchor="middle" class="dim">круг Ø 380</text>\n'
-    out += f'<text x="0" y="31" text-anchor="middle" class="ds">центр Ø 10 под M10 (сверлить вместе с ground board)</text>\n'
+    out += '<text x="0" y="-27" text-anchor="middle" class="lbl">Дно рокера (круг)</text>\n'
+    out += '<text x="0" y="-24" text-anchor="middle" class="qty">1 шт</text>\n'
+    out += f'<text x="0" y="27" text-anchor="middle" class="dim">круг Ø {BOTTOM_D:.0f}</text>\n'
+    out += '<text x="0" y="29.5" text-anchor="middle" class="ds">центр Ø 10 под M10</text>\n'
+    out += '<text x="0" y="32" text-anchor="middle" class="src">сверлить вместе с ground board</text>\n'
     out += '</g>\n'
 
     # ===== SECTION 4: GROUND BOARD =====
-    out += section_bar(232, '4.  GROUND BOARD (опорная плита)  ·  1 деталь  ·  лист 80×120')
-    # Smaller scale for ground board so it fits with labels
-    GBSCALE = 0.10  # 1:10 → Ø400 → 40mm
-    out += f'<g transform="translate(50,265)"><g transform="scale({GBSCALE})">\n'
+    out += section_bar(220, '4.  GROUND BOARD (опорная плита)  ·  1 деталь')
+    out += f'<g transform="translate(50,257)"><g transform="scale({SCALE})">\n'
     out += ground_inner()
     out += '</g>\n'
-    out += '<text x="0" y="-23" text-anchor="middle" class="lbl">Ground board · 1 шт</text>\n'
-    out += '<text x="0" y="24" text-anchor="middle" class="dim">круг Ø 400</text>\n'
-    out += '<text x="0" y="26.5" text-anchor="middle" class="ds">центр Ø 10 под ось M10</text>\n'
-    out += '<text x="0" y="29" text-anchor="middle" class="ds">3 PTFE на R=150 через 120°</text>\n'
-    out += '<text x="0" y="31.5" text-anchor="middle" class="src">пунктир — 3 рез. ножки на R=170</text>\n'
+    out += '<text x="0" y="-29" text-anchor="middle" class="lbl">Ground board · 1 шт</text>\n'
+    out += f'<text x="0" y="29" text-anchor="middle" class="dim">круг Ø {GROUND_D:.0f}</text>\n'
+    out += f'<text x="0" y="31.5" text-anchor="middle" class="ds">центр Ø 10 под ось M10</text>\n'
+    out += f'<text x="0" y="34" text-anchor="middle" class="ds">3 PTFE на R={PTFE_R_GROUND:.0f} через 120°</text>\n'
+    out += f'<text x="0" y="36.5" text-anchor="middle" class="src">пунктир — 3 рез. ножки на R={FEET_R_GROUND:.0f}</text>\n'
     out += '</g>\n'
 
     # Notes on right side
-    out += '<g transform="translate(105,243)">\n'
-    out += '<text x="0" y="0" class="lbl">ОТЛИЧИЯ от предыдущей версии:</text>\n'
-    out += '<text x="0" y="4.5" class="ds">• Подшипники: 1 диск Ø380 распилен пополам</text>\n'
-    out += '<text x="0" y="7" class="ds">  (вместо 2 кружков Ø200 — слишком мало;</text>\n'
-    out += '<text x="0" y="9.5" class="ds">  правило Stellafane: 1.2-1.8 × OD трубы)</text>\n'
-    out += '<text x="0" y="13" class="ds">• Дно рокера КРУГ Ø 380 (был квадрат)</text>\n'
-    out += '<text x="0" y="16" class="ds">• Ground board КРУГ Ø 400 (был квадрат)</text>\n'
-    out += '<text x="0" y="19" class="ds">• Вырез боковины рокера — теперь вниз ✓</text>\n'
-    out += '<text x="0" y="22" class="ds">• Y-пластина: 6 сквозных болтовых отв.</text>\n'
-    out += '<text x="0" y="24.5" class="ds">  (раньше совсем отсутствовали)</text>\n'
-    out += '<text x="0" y="28" class="src">Формулы: stellafane.org/tm/dob/mount/</text>\n'
-    out += '<text x="0" y="30.5" class="src">Цели: mirror 8" / sonotube ID250 OD258 / 18мм ply</text>\n'
+    out += '<g transform="translate(110,232)">\n'
+    out += '<text x="0" y="0" class="lbl">РАЗМЕРЫ ПО STELLAFANE (полные, без компромиссов):</text>\n'
+    out += '<text x="0" y="4.5" class="ds">• Подшипники: 1 диск Ø 440 (= 1.7×OD трубы)</text>\n'
+    out += '<text x="0" y="7" class="ds">  распилить пополам → 2 полукруглых</text>\n'
+    out += '<text x="0" y="10" class="ds">• Рокер высокий 600мм (балансная точка + 70мм)</text>\n'
+    out += '<text x="0" y="12.5" class="ds">• Передняя стенка 350×500</text>\n'
+    out += f'<text x="0" y="15" class="ds">• Дно рокера круг Ø {BOTTOM_D:.0f}</text>\n'
+    out += f'<text x="0" y="17.5" class="ds">• Ground board круг Ø {GROUND_D:.0f}</text>\n'
+    out += '<text x="0" y="20.5" class="ds">Сумма площади всех деталей ≈ 1.5 м².</text>\n'
+    out += '<text x="0" y="23" class="ds">Помещается на одном листе 1500×1500 или</text>\n'
+    out += '<text x="0" y="25.5" class="ds">1220×2440 (стандартный 4\'×8\').</text>\n'
+    out += '<text x="0" y="29" class="src">Формулы: stellafane.org/tm/dob/mount/cut.html</text>\n'
+    out += '<text x="0" y="31.5" class="src">Цели: mirror 8" / труба ID250 OD258 / 18мм ply</text>\n'
     out += '</g>\n'
 
     # Footer
     out += f'<rect x="0" y="287" width="{PAGE_W}" height="10" fill="#ecf0f1"/>\n'
     out += '<text x="3" y="291" class="nt" font-weight="bold" fill="#222">Замечания:</text>\n'
-    out += '<text x="3" y="294" class="nt">• Размеры компромиссные — влезает на 60×120 + 80×120. Для более просторного рокера — лист 100×150.</text>\n'
-    out += '<text x="3" y="296.8" class="nt">• Дно рокера и ground board сверлить Ø10 совместно — точная соосность оси. Кромки P120→P400.</text>\n'
+    out += '<text x="3" y="294" class="nt">• Дно рокера и ground board сверлить Ø10 совместно (=одной операцией) — иначе ось не сойдётся.</text>\n'
+    out += '<text x="3" y="296.8" class="nt">• Кромки P120 → P400. На торец подшипников и рокер-выреза наклеить PTFE (или Ebony Star) — это азимут. подшипник.</text>\n'
 
     out += '</svg>\n'
     return out
