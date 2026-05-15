@@ -26,7 +26,11 @@ HOLE_LIGHT_R = 25.0 # central light path hole radius (Ø50)
 HOLE_BOLT_R = 3.5   # M5 clearance hole radius (Ø7)
 BOLT_X = 43.0
 BOLT_Y = 40.0
-SEG = 96            # cylinder tessellation for smooth circles
+SEG = 128           # tessellation for the small (hole) cylinders (Ø50 and Ø7)
+SEG_TUBE = 1024     # tessellation for the large tube cylinder (R=129).
+                    # Hole edges on the curved bottom inherit these facets,
+                    # so we go aggressive: 1024 segments → 0.8mm chord step,
+                    # invisible at 0.2mm print resolution.
 
 OUT = Path(__file__).parent / "stl" / "Focuser saddle.stl"
 
@@ -69,7 +73,7 @@ def generate():
     transform = rotation_x_90() @ translation(0, 0, 0)  # rotate cyl axis to X
     # After rotation, cylinder height (originally along Z) is now along Y due to rotation_x_90 acting from left.
     # We want axis along X. Use trimesh's cylinder oriented via custom transform.
-    carve = trimesh.creation.cylinder(radius=R_TUBE, height=carve_len, sections=SEG)
+    carve = trimesh.creation.cylinder(radius=R_TUBE, height=carve_len, sections=SEG_TUBE)
     # default cylinder axis is Z. Rotate so axis is X: rotate -90 around Y.
     rot = trimesh.transformations.rotation_matrix(np.radians(90), [0, 1, 0])
     carve.apply_transform(rot)
