@@ -299,30 +299,35 @@ def build_comic():
         grub = load_part("Focuser grub")                                      # native
         adapter = load_part("1.25 eyepiece adapter", transform=translate(0, 0, 63))  # → 63..110
 
-        # Saddle: highlighted orange, exploded down by 10mm for clear visibility
-        SADDLE_GAP = 10
-        SADDLE_Z = -42 - SADDLE_GAP  # saddle top sits here
+        # Saddle: highlighted orange. Tube curve hides saddle in tight contact,
+        # so we explode it down by 15mm — clearly separates the three layers
+        # without misleading about real-assembly proportions.
+        SADDLE_EXPLODE = 15
+        SADDLE_Z = -42 - SADDLE_EXPLODE  # saddle top sits here
         saddle = load_part(
             "Focuser saddle",
             base_color=CLR_NEW,                            # orange highlight
-            transform=translate(0, 0, SADDLE_Z),           # native -10.6..0 → -62.6..-52
+            transform=translate(0, 0, SADDLE_Z),
         )
 
-        # Tube: tangent to saddle bottom at Y=0 (where saddle is thinnest, 2.5mm)
-        tube_top = SADDLE_Z - 2.5                          # tangent contact Z
-        tube_center_z = tube_top - 129                     # tube radius 129
-        tube_mesh = trimesh.creation.cylinder(radius=129, height=200, sections=128)
+        # Tube tangent to saddle bottom at Y=0 (saddle thickness 2.5mm there)
+        tube_top_z = SADDLE_Z - 2.5
+        tube_center_z = tube_top_z - 129
+        tube_mesh = trimesh.creation.cylinder(radius=129, height=140, sections=128)
         rot = trimesh.transformations.rotation_matrix(np.radians(90), [0, 1, 0])
         tube_mesh.apply_transform(rot)
         tube_mesh.apply_translation((0, 0, tube_center_z))
         tube_p = mesh_to_polycoll_data(tube_mesh, (0.85, 0.78, 0.65))
 
-        arrows = [((0, 0, -42), (0, 0, SADDLE_Z + 1))]    # focuser ↓ onto saddle
+        # Arrow: focuser bottom → saddle (shows they mate)
+        arrows = [((0, 0, -42), (0, 0, SADDLE_Z + 1))]
+
         page_step(
             pdf, 8, total,
             [tube_p, saddle, bottom, top, inner, ring, collet, nut, panel, grub, adapter],
             arrows=arrows,
-            center=(0, 0, 0), span=130, elev=8, azim=-60,
+            # Lower elev, more side-on: shows three-layer sandwich clearly
+            center=(0, 0, -25), span=115, elev=5, azim=-70,
         )
 
     print(f"Wrote {out}")
