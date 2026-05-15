@@ -284,35 +284,45 @@ def build_comic():
             center=(0, 15, 35), span=110,
         )
 
-        # ---- Step 8: final assembly + tube + saddle ----
-        # Show focuser sitting on saddle on a tube section
-        bottom = load_part("Focuser outer bottom")
-        top = load_part("Focuser outer top")
-        inner_p = load_part("Focuser inner", transform=translate(0, 0, 10))
-        ring_p = load_part("Focuser ring", transform=translate(0, 0, 35))
-        collet_p = load_part("Collet", transform=translate(0, 0, 45))
-        nut_p = load_part("Collet nut", transform=translate(0, 0, 55))
-        panel_p = load_part("Focuser grub screw panel", transform=translate(0, 38, 0))
-        grub_p = load_part("Focuser grub", transform=translate(0, 65, 0))
-        adapter_p = load_part("1.25 eyepiece adapter", transform=translate(0, 0, 75))
+        # ---- Step 8: final assembly + tube + saddle (saddle highlighted) ----
+        # Each STL is mostly in its "assembled" native Z position. We only
+        # translate the two parts that were stored in print-flat orientation:
+        #   collet nut (native Z=-42..-29, needs +92 → +50..+63 on top of inner)
+        #   1.25 adapter (native Z=0..47, needs +63 → +63..+110 above collet)
+        bottom = load_part("Focuser outer bottom")                            # -42..-5
+        top = load_part("Focuser outer top")                                  # -5..+18.4
+        inner = load_part("Focuser inner")                                    # -12..+59
+        ring = load_part("Focuser ring")                                      # 0..15
+        collet = load_part("Collet")                                          # 31..59
+        nut = load_part("Collet nut", transform=translate(0, 0, 92))          # → 50..63
+        panel = load_part("Focuser grub screw panel")                         # Y=45..54
+        grub = load_part("Focuser grub")                                      # native
+        adapter = load_part("1.25 eyepiece adapter", transform=translate(0, 0, 63))  # → 63..110
+
+        # Saddle: highlighted orange, exploded down by 10mm for clear visibility
+        SADDLE_GAP = 10
+        SADDLE_Z = -42 - SADDLE_GAP  # saddle top sits here
         saddle = load_part(
             "Focuser saddle",
-            transform=translate(0, 0, -55),  # below focuser
+            base_color=CLR_NEW,                            # orange highlight
+            transform=translate(0, 0, SADDLE_Z),           # native -10.6..0 → -62.6..-52
         )
-        # Tube as a fat cylinder
-        tube = trimesh.creation.cylinder(radius=129, height=200, sections=128)
-        rot = trimesh.transformations.rotation_matrix(np.radians(90), [0, 1, 0])
-        tube.apply_transform(rot)
-        tube.apply_translation((0, 0, -55 - 2.5 - 129))  # surface at z=-55-2.5
-        tube_p = mesh_to_polycoll_data(tube, (0.85, 0.78, 0.65))
 
-        arrows = [((0, 0, -45), (0, 0, -50))]  # focuser → saddle
+        # Tube: tangent to saddle bottom at Y=0 (where saddle is thinnest, 2.5mm)
+        tube_top = SADDLE_Z - 2.5                          # tangent contact Z
+        tube_center_z = tube_top - 129                     # tube radius 129
+        tube_mesh = trimesh.creation.cylinder(radius=129, height=200, sections=128)
+        rot = trimesh.transformations.rotation_matrix(np.radians(90), [0, 1, 0])
+        tube_mesh.apply_transform(rot)
+        tube_mesh.apply_translation((0, 0, tube_center_z))
+        tube_p = mesh_to_polycoll_data(tube_mesh, (0.85, 0.78, 0.65))
+
+        arrows = [((0, 0, -42), (0, 0, SADDLE_Z + 1))]    # focuser ↓ onto saddle
         page_step(
             pdf, 8, total,
-            [tube_p, saddle, bottom, top, inner_p, ring_p, collet_p, nut_p, panel_p, grub_p, adapter_p],
+            [tube_p, saddle, bottom, top, inner, ring, collet, nut, panel, grub, adapter],
             arrows=arrows,
-            subtitle="готово: focuser + saddle on tube",
-            center=(0, 0, 0), span=130, elev=10, azim=-65,
+            center=(0, 0, 0), span=130, elev=8, azim=-60,
         )
 
     print(f"Wrote {out}")
