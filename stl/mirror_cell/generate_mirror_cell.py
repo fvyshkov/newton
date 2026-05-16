@@ -34,16 +34,15 @@ TUBE_ID = 250.0          # mm — sonotube inner diameter
 TUBE_R = TUBE_ID / 2     # 125mm
 PLATE_T = 8.0            # plate thickness
 
-# Bolt circles for collimation push/pull.
-# Push and pull bolts sit as RADIAL PAIRS on each of the 3 ears:
-# at each ear angle one push hole at r=95 and one pull hole at r=80,
-# both on the same radial line. This is the standard 3-point cell —
-# each ear has a complete push-pull pair acting together.
+# Bolt circles — classic Stellafane "hexagonal" layout:
+# 3 push bolts at the EAR centers (0°/120°/240°), outer radius r=95.
+# 3 pull bolts BETWEEN ears (60°/180°/300°), inner radius r=80.
+# Push and pull are angularly offset by 60° and live on different radii.
+# (See images/stellafane_cell_plan1.jpg, plan2.jpg — labels show 30°/60°.)
 PUSH_R = 95.0
 PULL_R = 80.0
-EAR_ANGLES = [0, 120, 240]    # degrees — ear centers
-PUSH_ANGLES = EAR_ANGLES
-PULL_ANGLES = EAR_ANGLES
+PUSH_ANGLES = [0, 120, 240]
+PULL_ANGLES = [60, 180, 300]
 
 BOLT_HOLE_R = 3.0        # Ø6mm clearance for M5 (loose for tilt freedom)
 VENT_R = 15.0            # Ø30mm central vent
@@ -51,9 +50,12 @@ VENT_R = 15.0            # Ø30mm central vent
 # Front plate
 FRONT_R = 215.0 / 2
 
-# Back plate Y-shape — scallops carved between ears
-SCALLOP_D = 195.0        # scallop center distance from origin
-SCALLOP_R = 120.0        # scallop radius
+# Back plate Y-shape — scallops carved between ears.
+# Scallop inner reach = D - R = 90mm, so material survives between ears
+# from r=0 to r=90. This keeps ~10mm of meat around each pull hole
+# (which sits at r=80 right inside the scallop zone).
+SCALLOP_D = 195.0
+SCALLOP_R = 105.0
 SCALLOP_ANGLES = [60, 180, 300]
 
 # Integrated tube-wall tabs (replace metal angle brackets)
