@@ -51,11 +51,11 @@ PLATE_T = 8.0                 # plate thickness
 PUSH_R = 70.0
 PULL_R = 89.0
 
-# Angular layout (Stellafane convention, mirror supports at 0°/120°/240°):
-#   support  -- push 30° -- pull 60° -- support 120° -- ...
-# 30° between mirror-support and push, 30° between push and pull,
-# 60° between pull and next mirror-support.
-PUSH_ANGLES = [30, 150, 270]
+# Angular layout: 6 bolts evenly spaced every 60° around the plate.
+# Push and pull alternate: push at 0°/120°/240°, pull at 60°/180°/300°.
+# (Different from Stellafane's 30°/30°/60° pattern — chose uniform 60°
+#  spacing for cleaner geometry and a symmetric Y-plate.)
+PUSH_ANGLES = [0, 120, 240]
 PULL_ANGLES = [60, 180, 300]
 
 BOLT_HOLE_R = 3.0             # Ø6mm clearance for M5
@@ -65,19 +65,22 @@ VENT_R = 15.0                 # Ø30 central vent
 FRONT_R = 215.0 / 2
 
 # Mirror retention уголки on front plate.
-RETAINER_ANGLES = [0, 120, 240]   # midway between adjacent pull bolts
+# Placed midway between adjacent push/pull bolts (30°/150°/270°), where
+# they don't clash with any bolt hole.
+RETAINER_ANGLES = [30, 150, 270]
 RETAINER_INNER_R = MIRROR_R + 3.0 # 3mm radial gap to mirror edge (≈ Stellafane 1/8″)
 RETAINER_T = 3.0                  # radial wall thickness
 RETAINER_W = 20.0                 # tangential width
 RETAINER_H = 8.0                  # height above plate top surface
 
 # --- Back plate Y-shape ---
-# Ears centered between push & pull pair → 45°/165°/285° (= midpoint of 30°+60°).
-# Scallops carved out in the empty regions BETWEEN bolt pairs → 105°/225°/345°.
-EAR_ANGLES = [45, 165, 285]
-SCALLOP_ANGLES = [105, 225, 345]
-SCALLOP_D = 195.0                 # scallop circle center distance from origin
-SCALLOP_R = 120.0                 # scallop circle radius
+# Each push+pull pair (e.g. push at 0°, pull at 60°) has its midpoint at 30°.
+# Ears centered on these midpoints (30°/150°/270°) — each ear covers one
+# bolt pair. Scallops carved in the empty regions between pairs (90°/210°/330°).
+EAR_ANGLES = [30, 150, 270]
+SCALLOP_ANGLES = [90, 210, 330]
+SCALLOP_D = 195.0
+SCALLOP_R = 110.0                 # leaves ~11mm clearance around the pull holes
 
 # Radial mounting holes through ear edges (M5×12 from outside the tube wall).
 MOUNT_HOLE_R = 2.75               # Ø5.5 clearance for M5 bolt body
