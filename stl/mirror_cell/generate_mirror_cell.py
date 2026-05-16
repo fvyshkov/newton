@@ -34,11 +34,16 @@ TUBE_ID = 250.0          # mm — sonotube inner diameter
 TUBE_R = TUBE_ID / 2     # 125mm
 PLATE_T = 8.0            # plate thickness
 
-# Bolt circles for collimation push/pull
+# Bolt circles for collimation push/pull.
+# Push and pull bolts sit as RADIAL PAIRS on each of the 3 ears:
+# at each ear angle one push hole at r=95 and one pull hole at r=80,
+# both on the same radial line. This is the standard 3-point cell —
+# each ear has a complete push-pull pair acting together.
 PUSH_R = 95.0
 PULL_R = 80.0
-PUSH_ANGLES = [0, 120, 240]   # degrees — ear centers too
-PULL_ANGLES = [60, 180, 300]
+EAR_ANGLES = [0, 120, 240]    # degrees — ear centers
+PUSH_ANGLES = EAR_ANGLES
+PULL_ANGLES = EAR_ANGLES
 
 BOLT_HOLE_R = 3.0        # Ø6mm clearance for M5 (loose for tilt freedom)
 VENT_R = 15.0            # Ø30mm central vent
