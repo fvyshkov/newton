@@ -2,27 +2,35 @@
 """
 Printed mirror cell generator for 8" Newtonian build.
 
-Replaces the plywood Stellafane-style cell with two printable parts:
+Two printable parts:
 
-  Mirror_cell_front.stl   Ø215mm round plate (mirror rests on this)
-  Mirror_cell_back.stl    Y-shaped Ø250mm plate with 3 integrated wall tabs
-                          (the tabs replace the metal angle brackets — they
-                           clip the inside of the tube wall, M5 bolts pass
-                           radially from outside through tube into tab)
+  Mirror_cell_front.stl   Ø215mm round plate (mirror rests on this) with
+                          3 small vertical retention уголки on top,
+                          positioned just outside the mirror edge to
+                          stop it from sliding sideways.
 
-All holes are CLEARANCE for M5 (Ø6mm), no printed threads — assembly uses
-bolts + nuts, exactly like the plywood version.
+  Mirror_cell_back.stl    Y-shaped Ø250mm plate. Three ears reach the
+                          tube ID; each ear has a radial Ø5.5mm hole
+                          in its outer edge, so an M5×12 bolt from
+                          outside the tube goes through the cardboard
+                          wall straight into the ear. No tabs, no
+                          metal angle brackets.
 
-Built via boolean CSG (trimesh + manifold3d) for guaranteed manifold mesh.
+All 6 collimation holes are CLEARANCE for M5 (Ø6mm) and match between
+the two plates so the bolts pass straight through. No printed threads —
+push/pull assembly uses bolts + nuts exactly like the plywood version.
+
+Radii follow the classic Stellafane proportions:
+  Pull (OUTER) circle: diameter = mirror_D − 1″ → 8″ mirror → r ≈ 89mm
+  Push (INNER) circle: diameter = mirror_D − 2½″ → 8″ mirror → r ≈ 70mm
+Push and pull are 30° apart angularly, on different radii.
+
+Built via boolean CSG (trimesh + manifold3d).
 
 Print orientation: both parts flat on bed.
-  Front: any side up.
-  Back: tabs face up. No supports needed (tabs are vertical walls sitting
-        directly above plate edge — no overhang).
-
-Stiffness: plate is intentionally thin (8mm). Add ribs in slicer via
-  walls 8+ and infill 30-40% gyroid. PETG-HF or ASA recommended,
-  NOT PLA (creeps under load, softens in summer sun).
+  Front: plate-side down on bed, retainer walls face up (no overhang).
+  Back:  flat, either side up.
+Stiffness: walls 8+, infill 30-40% gyroid. PETG-HF or ASA, NOT PLA.
 """
 import math
 from pathlib import Path
@@ -30,40 +38,49 @@ from pathlib import Path
 import trimesh
 
 # --- Common parameters ---
-TUBE_ID = 250.0          # mm — sonotube inner diameter
-TUBE_R = TUBE_ID / 2     # 125mm
-PLATE_T = 8.0            # plate thickness
+TUBE_ID = 250.0
+TUBE_R = TUBE_ID / 2          # 125mm
+MIRROR_D = 203.0
+MIRROR_R = MIRROR_D / 2       # 101.5mm
+PLATE_T = 8.0                 # plate thickness
 
-# Bolt circles — classic Stellafane "hexagonal" layout:
-# 3 push bolts at the EAR centers (0°/120°/240°), outer radius r=95.
-# 3 pull bolts BETWEEN ears (60°/180°/300°), inner radius r=80.
-# Push and pull are angularly offset by 60° and live on different radii.
-# (See images/stellafane_cell_plan1.jpg, plan2.jpg — labels show 30°/60°.)
-PUSH_R = 95.0
-PULL_R = 80.0
-PUSH_ANGLES = [0, 120, 240]
+# --- Bolt geometry (Stellafane proportions) ---
+# Pull bolt circle diameter = mirror_D − 1″  → r = (203 − 25.4)/2 ≈ 88.8mm
+# Push bolt circle diameter = mirror_D − 2½″ → r = (203 − 63.5)/2 ≈ 69.75mm
+# Push goes through INNER ring, pull through OUTER ring.
+PUSH_R = 70.0
+PULL_R = 89.0
+
+# Angular layout (Stellafane convention, mirror supports at 0°/120°/240°):
+#   support  -- push 30° -- pull 60° -- support 120° -- ...
+# 30° between mirror-support and push, 30° between push and pull,
+# 60° between pull and next mirror-support.
+PUSH_ANGLES = [30, 150, 270]
 PULL_ANGLES = [60, 180, 300]
 
-BOLT_HOLE_R = 3.0        # Ø6mm clearance for M5 (loose for tilt freedom)
-VENT_R = 15.0            # Ø30mm central vent
+BOLT_HOLE_R = 3.0             # Ø6mm clearance for M5
+VENT_R = 15.0                 # Ø30 central vent
 
-# Front plate
+# --- Front plate ---
 FRONT_R = 215.0 / 2
 
-# Back plate Y-shape — scallops carved between ears.
-# Scallop inner reach = D - R = 90mm, so material survives between ears
-# from r=0 to r=90. This keeps ~10mm of meat around each pull hole
-# (which sits at r=80 right inside the scallop zone).
-SCALLOP_D = 195.0
-SCALLOP_R = 105.0
-SCALLOP_ANGLES = [60, 180, 300]
+# Mirror retention уголки on front plate.
+RETAINER_ANGLES = [0, 120, 240]   # midway between adjacent pull bolts
+RETAINER_INNER_R = MIRROR_R + 3.0 # 3mm radial gap to mirror edge (≈ Stellafane 1/8″)
+RETAINER_T = 3.0                  # radial wall thickness
+RETAINER_W = 20.0                 # tangential width
+RETAINER_H = 8.0                  # height above plate top surface
 
-# Integrated tube-wall tabs (replace metal angle brackets)
-TAB_W = 35.0             # tangential width
-TAB_H = 25.0             # height above plate top
-TAB_T = 5.0              # radial thickness
-TAB_HOLE_R = 2.75        # M5 clearance
-TAB_HOLE_Z = 12.0        # bolt hole, mm above plate top (≈ middle of tab)
+# --- Back plate Y-shape ---
+# Ears centered between push & pull pair → 45°/165°/285° (= midpoint of 30°+60°).
+# Scallops carved out in the empty regions BETWEEN bolt pairs → 105°/225°/345°.
+EAR_ANGLES = [45, 165, 285]
+SCALLOP_ANGLES = [105, 225, 345]
+SCALLOP_D = 195.0                 # scallop circle center distance from origin
+SCALLOP_R = 120.0                 # scallop circle radius
+
+# Radial mounting holes through ear edges (M5×12 from outside the tube wall).
+MOUNT_HOLE_R = 2.75               # Ø5.5 clearance for M5 bolt body
 
 SEG = 96
 SEG_DISK = 256
@@ -92,6 +109,26 @@ def punch(body, radius, x, y):
     return body.difference(h)
 
 
+def make_retainer(angle_deg):
+    """Small vertical wall on the front plate to keep the mirror from
+    sliding sideways. Outer face clipped to plate edge so it doesn't
+    overhang."""
+    a = math.radians(angle_deg)
+    wall = trimesh.creation.box(extents=(RETAINER_T, RETAINER_W, RETAINER_H))
+    r_center = RETAINER_INNER_R + RETAINER_T / 2
+    wall.apply_translation([r_center, 0, PLATE_T / 2 + RETAINER_H / 2])
+    # Clip outer face / corners to plate edge.
+    plate_clip = trimesh.creation.cylinder(
+        radius=FRONT_R, height=RETAINER_H + 4, sections=SEG_DISK
+    )
+    plate_clip.apply_translation([0, 0, PLATE_T / 2 + RETAINER_H / 2])
+    wall = wall.intersection(plate_clip)
+    # Rotate to ear angle.
+    rot_z = trimesh.transformations.rotation_matrix(a, [0, 0, 1])
+    wall.apply_transform(rot_z)
+    return wall
+
+
 def make_front():
     body = disk(FRONT_R, PLATE_T)
     body = punch(body, VENT_R, 0, 0)
@@ -101,35 +138,15 @@ def make_front():
     for ang in PULL_ANGLES:
         x, y = xy(ang, PULL_R)
         body = punch(body, BOLT_HOLE_R, x, y)
+    for ang in RETAINER_ANGLES:
+        body = body.union(make_retainer(ang))
     return body
-
-
-def make_tab(angle_deg):
-    """Vertical flat tab at the ear tip. Outer face flush with tube ID.
-    One radial bolt hole through tab."""
-    a = math.radians(angle_deg)
-
-    tab = trimesh.creation.box(extents=(TAB_T, TAB_W, TAB_H))
-    r_center = TUBE_R - TAB_T / 2
-    tab.apply_translation([r_center, 0, PLATE_T / 2 + TAB_H / 2])
-
-    # Bolt hole: axis along X (radial outward at angle 0).
-    bolt = trimesh.creation.cylinder(radius=TAB_HOLE_R, height=TAB_T + 20, sections=64)
-    rot_y = trimesh.transformations.rotation_matrix(math.radians(90), [0, 1, 0])
-    bolt.apply_transform(rot_y)
-    bolt.apply_translation([r_center, 0, PLATE_T / 2 + TAB_HOLE_Z])
-    tab = tab.difference(bolt)
-
-    # Rotate complete tab+hole assembly to its ear angle.
-    rot_z = trimesh.transformations.rotation_matrix(a, [0, 0, 1])
-    tab.apply_transform(rot_z)
-    return tab
 
 
 def make_back():
     body = disk(TUBE_R, PLATE_T)
 
-    # Carve scallops between ears → Y-shape.
+    # Carve scallops in the empty angular regions between bolt pairs.
     for ang in SCALLOP_ANGLES:
         x, y = xy(ang, SCALLOP_D)
         scallop = trimesh.creation.cylinder(
@@ -139,6 +156,8 @@ def make_back():
         body = body.difference(scallop)
 
     body = punch(body, VENT_R, 0, 0)
+
+    # Same 6 collimation holes as front plate — bolts go through both.
     for ang in PUSH_ANGLES:
         x, y = xy(ang, PUSH_R)
         body = punch(body, BOLT_HOLE_R, x, y)
@@ -146,9 +165,21 @@ def make_back():
         x, y = xy(ang, PULL_R)
         body = punch(body, BOLT_HOLE_R, x, y)
 
-    # Integrated wall tabs at each ear tip.
-    for ang in PUSH_ANGLES:
-        body = body.union(make_tab(ang))
+    # Radial Ø5.5 mounting holes through each ear's outer edge,
+    # centered on plate mid-thickness (Z=0).
+    for ang in EAR_ANGLES:
+        a = math.radians(ang)
+        bolt = trimesh.creation.cylinder(
+            radius=MOUNT_HOLE_R, height=40, sections=64
+        )
+        # axis Z → axis X (radial outward at angle 0)
+        rot_y = trimesh.transformations.rotation_matrix(math.radians(90), [0, 1, 0])
+        bolt.apply_transform(rot_y)
+        # Center the cylinder so it spans well past the ear edge in both directions.
+        bolt.apply_translation([TUBE_R - 10, 0, 0])
+        rot_z = trimesh.transformations.rotation_matrix(a, [0, 0, 1])
+        bolt.apply_transform(rot_z)
+        body = body.difference(bolt)
 
     return body
 
@@ -168,14 +199,16 @@ def main():
     print(f"  -> {OUT_BACK.name}  {len(back.faces)} faces, "
           f"{e[0]:.1f}x{e[1]:.1f}x{e[2]:.1f}mm")
 
-    print("\nPrint hints:")
+    print()
+    print(f"  push circle: r={PUSH_R:.1f}  Ø{2*PUSH_R:.1f}  "
+          f"(Stellafane: (mirror_D − 2.5″)/2 = {(MIRROR_D - 63.5)/2:.2f}mm)")
+    print(f"  pull circle: r={PULL_R:.1f}  Ø{2*PULL_R:.1f}  "
+          f"(Stellafane: (mirror_D − 1″)/2  = {(MIRROR_D - 25.4)/2:.2f}mm)")
+    print()
     print("  Material : PETG-HF or ASA (NOT PLA)")
-    print("  Layer    : 0.2mm")
-    print("  Walls    : 8+")
-    print("  Infill   : 30-40% gyroid")
-    print("  Supports : none (tabs sit above plate edge - no overhang)")
-    print("  Bolts    : M5x50 push, M5x20 pull, M5x12 to tube wall — clearance holes,")
-    print("             use M5 nuts on the far side. NO threads in plastic.")
+    print("  Layer    : 0.2mm, walls 8+, infill 30-40% gyroid")
+    print("  Bolts    : M5x50 push, M5x20 pull, M5x12 mounting — all clearance,")
+    print("             use M5 nuts on the far side.")
 
 
 if __name__ == "__main__":
