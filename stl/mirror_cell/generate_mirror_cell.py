@@ -61,6 +61,12 @@ PULL_ANGLES = [60, 180, 300]
 BOLT_HOLE_R = 3.0             # Ø6mm clearance for M5
 VENT_R = 15.0                 # Ø30 central vent
 
+# Counterbore on the top of the FRONT plate around each bolt hole.
+# Lets the bolt head sit recessed instead of protruding above the felt
+# pads and interfering with the mirror.
+COUNTERBORE_R = 5.0           # Ø10mm — fits M5 hex head (~8.5mm AF) with margin
+COUNTERBORE_DEPTH = 4.0       # half the 8mm plate thickness
+
 # --- Front plate ---
 FRONT_R = 215.0 / 2
 
@@ -69,9 +75,12 @@ FRONT_R = 215.0 / 2
 # they don't clash with any bolt hole.
 RETAINER_ANGLES = [30, 150, 270]
 RETAINER_INNER_R = MIRROR_R + 3.0 # 3mm radial gap to mirror edge (≈ Stellafane 1/8″)
-RETAINER_T = 3.0                  # radial wall thickness
+RETAINER_T = 3.5                  # radial wall thickness
 RETAINER_W = 20.0                 # tangential width
-RETAINER_H = 8.0                  # height above plate top surface
+RETAINER_H = 58.0                 # height above plate top surface
+                                  # (5cm taller than original 8mm —
+                                  # tall enough to guide mirror as it
+                                  # descends through tube during install)
 
 # --- Back plate Y-shape ---
 # Each push+pull pair (e.g. push at 0°, pull at 60°) has its midpoint at 30°.
@@ -112,6 +121,18 @@ def punch(body, radius, x, y):
     return body.difference(h)
 
 
+def counterbore_top(body, x, y, radius=COUNTERBORE_R, depth=COUNTERBORE_DEPTH):
+    """Carve a counterbore on the TOP surface of the plate at (x, y),
+    going DOWN by `depth` mm. Used so a bolt head sits flush/recessed
+    instead of protruding above the plate."""
+    h = depth + 1.0  # extra so the cylinder cleanly exits above plate top
+    cs = trimesh.creation.cylinder(radius=radius, height=h, sections=96)
+    # Cylinder spans Z = (top - depth) to (top + 1) — i.e. recess depth below top.
+    z_center = PLATE_T / 2 - depth / 2 + 0.5
+    cs.apply_translation([x, y, z_center])
+    return body.difference(cs)
+
+
 def make_retainer(angle_deg):
     """Small vertical wall on the front plate to keep the mirror from
     sliding sideways. Outer face clipped to plate edge so it doesn't
@@ -120,9 +141,13 @@ def make_retainer(angle_deg):
     wall = trimesh.creation.box(extents=(RETAINER_T, RETAINER_W, RETAINER_H))
     r_center = RETAINER_INNER_R + RETAINER_T / 2
     wall.apply_translation([r_center, 0, PLATE_T / 2 + RETAINER_H / 2])
-    # Clip outer face / corners to plate edge.
+    # Clip outer face / corners to (whichever is larger) plate edge or
+    # the retainer's own outer face. This way a thicker retainer that
+    # would otherwise be trimmed by the plate edge stays full thickness;
+    # it may protrude past the plate by a fraction of a mm, which is fine.
+    clip_r = max(FRONT_R, RETAINER_INNER_R + RETAINER_T + 1.0)
     plate_clip = trimesh.creation.cylinder(
-        radius=FRONT_R, height=RETAINER_H + 4, sections=SEG_DISK
+        radius=clip_r, height=RETAINER_H + 4, sections=SEG_DISK
     )
     plate_clip.apply_translation([0, 0, PLATE_T / 2 + RETAINER_H / 2])
     wall = wall.intersection(plate_clip)
@@ -138,9 +163,11 @@ def make_front():
     for ang in PUSH_ANGLES:
         x, y = xy(ang, PUSH_R)
         body = punch(body, BOLT_HOLE_R, x, y)
+        body = counterbore_top(body, x, y)
     for ang in PULL_ANGLES:
         x, y = xy(ang, PULL_R)
         body = punch(body, BOLT_HOLE_R, x, y)
+        body = counterbore_top(body, x, y)
     for ang in RETAINER_ANGLES:
         body = body.union(make_retainer(ang))
     return body
