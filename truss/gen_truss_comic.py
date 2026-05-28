@@ -297,14 +297,19 @@ def mirror_cell_front(z, color=CLR_BODY):
 
 
 def three_leg_brackets(z_base, color=CLR_BODY):
-    """3 leg brackets at 120° around old mirror cell. Native at (0..14, -13..13, -56..4)."""
+    """3 leg brackets at 120° around old mirror cell. Native at (0..14, -13..13, -56..4).
+
+    Bracket-local +x = radial outward; concave inner face at x=0 wraps the ear
+    cylinder of radius EAR_R=125. So translate to (125·cos a, 125·sin a) and
+    rotate by `ang` so local +x points radially outward.
+    """
     out = []
-    radius = 115  # at cell ear
+    radius = 125  # ear outer surface
     for k in range(3):
         ang = 30 + k * 120
         rad = np.radians(ang)
         cx, cy = radius * np.cos(rad), radius * np.sin(rad)
-        T = compose(translate(cx, cy, z_base), rotate_z(ang - 90))
+        T = compose(translate(cx, cy, z_base), rotate_z(ang))
         out.append(load_part("Cell_leg_bracket", base_color=color, transform=T))
     return out
 
@@ -446,7 +451,8 @@ def build_comic():
         page_step(
             pdf, 5, total,
             [uta, *uta_sockets, spider, sec_holder],
-            arrows=[((0, 0, 345), (0, 0, spider_z_target + 5))],
+            # Arrow points to where the holder slab will land: on top of spider hub.
+            arrows=[((0, 0, 345), (0, 0, spider_z_target - 2))],
             center=(0, 0, 200), span=280, elev=18, azim=-55,
         )
 
@@ -459,19 +465,20 @@ def build_comic():
         for k in range(3):
             ang = 30 + k * 120
             rad = np.radians(ang)
-            cx, cy = 115 * np.cos(rad), 115 * np.sin(rad)
-            T = compose(translate(cx, cy, bracket_lift), rotate_z(ang - 90))
+            cx, cy = 125 * np.cos(rad), 125 * np.sin(rad)
+            T = compose(translate(cx, cy, bracket_lift), rotate_z(ang))
             brackets.append(load_part("Cell_leg_bracket", base_color=CLR_NEW, transform=T))
         arrows = []
         for k in range(3):
             ang = np.radians(30 + k * 120)
-            cx, cy = 115 * np.cos(ang), 115 * np.sin(ang)
-            arrows.append(((cx, cy, bracket_lift - 20), (cx, cy, 10)))
+            cx, cy = 125 * np.cos(ang), 125 * np.sin(ang)
+            # bracket M5 hole lands at plate z=0 (cell ear M5 hole height)
+            arrows.append(((cx, cy, bracket_lift - 20), (cx, cy, 0)))
         page_step(
             pdf, 6, total,
             [back, *brackets],
             arrows=arrows,
-            center=(0, 0, 50), span=180, elev=22, azim=-55,
+            center=(0, 0, 30), span=180, elev=22, azim=-55,
         )
 
         # ===== Step 7: Lower the UTA assembly down onto the four tubes =====
@@ -498,8 +505,10 @@ def build_comic():
             uta_sockets_top.append(load_part("Truss_socket", base_color=CLR_NEW, transform=T))
         spider_top = load_part("Spider_4vane", base_color=CLR_NEW,
                                transform=translate(0, 0, uta_lift + spider_z_target - 8))
+        # Holder slab (z=0..5 native) sits on spider hub top.
+        # Spider hub top = spider_translate_z + HUB_T = (sz-8) + 6 = sz - 2.
         sec_top = load_part("Secondary_holder", base_color=CLR_NEW,
-                            transform=translate(0, 0, uta_lift + spider_z_target - 30))
+                            transform=translate(0, 0, uta_lift + spider_z_target - 2))
 
         # Arrow: big down arrow from UTA assembly to tubes
         arrows = [((0, 0, uta_lift - 50), (0, 0, 1050))]
@@ -533,21 +542,27 @@ def build_comic():
             uta_sockets_final.append(load_part("Truss_socket", base_color=CLR_BODY, transform=T))
         spider_final = load_part("Spider_4vane", base_color=CLR_BODY,
                                  transform=translate(0, 0, UTA_AT + spider_z_target - 8))
+        # Holder slab sits on spider hub top (UTA_AT + spider_z_target - 2).
         sec_final = load_part("Secondary_holder", base_color=CLR_BODY,
-                              transform=translate(0, 0, UTA_AT + spider_z_target - 30))
-        # Mirror cell at bottom, inside the box
+                              transform=translate(0, 0, UTA_AT + spider_z_target - 2))
+        # Mirror cell at bottom, inside the box. Cell base at world z=30
+        # (lifted ~22mm above box floor on the 3 M8 collimation shafts).
+        cell_z = 30
         back_final = load_part("Mirror_cell_back", base_color=CLR_BODY, legacy=True,
-                               transform=translate(0, 0, 30))
+                               transform=translate(0, 0, cell_z))
         front_final = load_part("Mirror_cell_front", base_color=CLR_BODY, legacy=True,
-                                transform=translate(0, 0, 30))
+                                transform=translate(0, 0, cell_z))
         bracket_final = []
         for k in range(3):
             ang = 30 + k * 120
             rad = np.radians(ang)
-            cx, cy = 115 * np.cos(rad), 115 * np.sin(rad)
-            T = compose(translate(cx, cy, 60), rotate_z(ang - 90))
+            cx, cy = 125 * np.cos(rad), 125 * np.sin(rad)
+            # Bracket M5 hole (native z=0) lands at cell M5 hole z=cell_z.
+            T = compose(translate(cx, cy, cell_z), rotate_z(ang))
             bracket_final.append(load_part("Cell_leg_bracket", base_color=CLR_BODY, transform=T))
-        mirror = make_disc(101.5, 20, transform=translate(0, 0, 90), color=CLR_MIRROR)
+        # Mirror disc (20mm thick) sits on cell back top (z=cell_z+4 native top).
+        mirror_z = cell_z + 4 + 10  # center 10mm above cell back top
+        mirror = make_disc(101.5, 20, transform=translate(0, 0, mirror_z), color=CLR_MIRROR)
 
         page_step(
             pdf, 8, total,
