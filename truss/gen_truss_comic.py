@@ -300,11 +300,11 @@ def three_leg_brackets(z_base, color=CLR_BODY):
     """3 leg brackets at 120° around old mirror cell. Native at (0..14, -13..13, -56..4).
 
     Bracket-local +x = radial outward; concave inner face at x=0 wraps the ear
-    cylinder of radius EAR_R=125. So translate to (125·cos a, 125·sin a) and
-    rotate by `ang` so local +x points radially outward.
+    cylinder of radius EAR_R=125. Push 3mm into the ear so the parts read as
+    bolted/joined instead of just touching at a thin curve.
     """
     out = []
-    radius = 125  # ear outer surface
+    radius = 122  # 3mm overlap with ear cylinder (r=125) — visibly joined
     for k in range(3):
         ang = 30 + k * 120
         rad = np.radians(ang)
@@ -465,14 +465,13 @@ def build_comic():
         for k in range(3):
             ang = 30 + k * 120
             rad = np.radians(ang)
-            cx, cy = 125 * np.cos(rad), 125 * np.sin(rad)
+            cx, cy = 122 * np.cos(rad), 122 * np.sin(rad)
             T = compose(translate(cx, cy, bracket_lift), rotate_z(ang))
             brackets.append(load_part("Cell_leg_bracket", base_color=CLR_NEW, transform=T))
         arrows = []
         for k in range(3):
             ang = np.radians(30 + k * 120)
-            cx, cy = 125 * np.cos(ang), 125 * np.sin(ang)
-            # bracket M5 hole lands at plate z=0 (cell ear M5 hole height)
+            cx, cy = 122 * np.cos(ang), 122 * np.sin(ang)
             arrows.append(((cx, cy, bracket_lift - 20), (cx, cy, 0)))
         page_step(
             pdf, 6, total,
@@ -487,8 +486,10 @@ def build_comic():
         sockets_seated = four_box_sockets(color=CLR_BODY)
         tubes_in_place = []
         for cx, cy in [(167, 167), (-167, 167), (-167, -167), (167, -167)]:
-            m = trimesh.creation.cylinder(radius=11, height=900, sections=20)
-            m.apply_translation((cx, cy, 130 + 450))  # tube from ~130 to ~1030
+            # Tubes go from box socket bore bottom (z=80) to UTA frame top (z=1100)
+            # so they fully fill both clamp bores — joined, not just touching.
+            m = trimesh.creation.cylinder(radius=11, height=1020, sections=20)
+            m.apply_translation((cx, cy, 80 + 510))  # tube from z=80 to z=1100
             tubes_in_place.append(mesh_to_polycoll(m, CLR_TUBE))
 
         # UTA assembly lifted above
@@ -505,10 +506,10 @@ def build_comic():
             uta_sockets_top.append(load_part("Truss_socket", base_color=CLR_NEW, transform=T))
         spider_top = load_part("Spider_4vane", base_color=CLR_NEW,
                                transform=translate(0, 0, uta_lift + spider_z_target - 8))
-        # Holder slab (z=0..5 native) sits on spider hub top.
-        # Spider hub top = spider_translate_z + HUB_T = (sz-8) + 6 = sz - 2.
+        # Holder slab sinks 2mm into spider hub top (visibly joined, not just
+        # touching at one Z value). Hub top = sz-2, push slab down 2mm to sz-4.
         sec_top = load_part("Secondary_holder", base_color=CLR_NEW,
-                            transform=translate(0, 0, uta_lift + spider_z_target - 2))
+                            transform=translate(0, 0, uta_lift + spider_z_target - 4))
 
         # Arrow: big down arrow from UTA assembly to tubes
         arrows = [((0, 0, uta_lift - 50), (0, 0, 1050))]
@@ -527,8 +528,9 @@ def build_comic():
         sockets_seated = four_box_sockets(color=CLR_BODY)
         tubes_full = []
         for cx, cy in [(167, 167), (-167, 167), (-167, -167), (167, -167)]:
-            m = trimesh.creation.cylinder(radius=11, height=900, sections=20)
-            m.apply_translation((cx, cy, 130 + 450))
+            # Tubes fully fill both clamp bores (box: z=80..200, UTA: z=980..1100).
+            m = trimesh.creation.cylinder(radius=11, height=1020, sections=20)
+            m.apply_translation((cx, cy, 80 + 510))  # z=80 to z=1100
             tubes_full.append(mesh_to_polycoll(m, CLR_TUBE))
         uta_final = load_part("UTA_ring", base_color=CLR_BODY,
                               transform=translate(0, 0, UTA_AT))
@@ -542,12 +544,14 @@ def build_comic():
             uta_sockets_final.append(load_part("Truss_socket", base_color=CLR_BODY, transform=T))
         spider_final = load_part("Spider_4vane", base_color=CLR_BODY,
                                  transform=translate(0, 0, UTA_AT + spider_z_target - 8))
-        # Holder slab sits on spider hub top (UTA_AT + spider_z_target - 2).
+        # Holder slab sinks 2mm into spider hub for visible joining.
         sec_final = load_part("Secondary_holder", base_color=CLR_BODY,
-                              transform=translate(0, 0, UTA_AT + spider_z_target - 2))
-        # Mirror cell at bottom, inside the box. Cell base at world z=30
-        # (lifted ~22mm above box floor on the 3 M8 collimation shafts).
-        cell_z = 30
+                              transform=translate(0, 0, UTA_AT + spider_z_target - 4))
+        # Mirror cell at bottom, inside the box. cell_z=66 chosen so the leg
+        # brackets (which extend 56mm below the cell ear) sit 2mm above the
+        # box floor (z=8), while the cell-front retainers (62mm above the ear)
+        # have 2mm clearance under the box top (z=130).
+        cell_z = 66
         back_final = load_part("Mirror_cell_back", base_color=CLR_BODY, legacy=True,
                                transform=translate(0, 0, cell_z))
         front_final = load_part("Mirror_cell_front", base_color=CLR_BODY, legacy=True,
@@ -556,19 +560,31 @@ def build_comic():
         for k in range(3):
             ang = 30 + k * 120
             rad = np.radians(ang)
-            cx, cy = 125 * np.cos(rad), 125 * np.sin(rad)
-            # Bracket M5 hole (native z=0) lands at cell M5 hole z=cell_z.
+            # 3mm radial overlap with ear (r=125) so bracket visibly hugs/joins.
+            cx, cy = 122 * np.cos(rad), 122 * np.sin(rad)
             T = compose(translate(cx, cy, cell_z), rotate_z(ang))
             bracket_final.append(load_part("Cell_leg_bracket", base_color=CLR_BODY, transform=T))
-        # Mirror disc (20mm thick) sits on cell back top (z=cell_z+4 native top).
-        mirror_z = cell_z + 4 + 10  # center 10mm above cell back top
+        # Mirror disc (20mm thick) sinks 2mm into cell back top so it reads
+        # as resting in/joined to the cell rather than floating above it.
+        mirror_z = cell_z + 4 + 10 - 2
         mirror = make_disc(101.5, 20, transform=translate(0, 0, mirror_z), color=CLR_MIRROR)
+        # 3 M8 collimation shafts from box floor (z=8) up through the bracket
+        # M8 holes (z=cell_z-44=22). Without these the cell would look like
+        # it's floating inside the box.
+        m8_shafts = []
+        for k in range(3):
+            ang = 30 + k * 120
+            rad = np.radians(ang)
+            sx, sy = 132 * np.cos(rad), 132 * np.sin(rad)
+            shaft = trimesh.creation.cylinder(radius=4, height=60, sections=16)
+            shaft.apply_translation((sx, sy, 8 + 30))  # z=8..68 (through bracket M8 at z=22)
+            m8_shafts.append(mesh_to_polycoll(shaft, CLR_HARDWARE))
 
         page_step(
             pdf, 8, total,
             [box, *sockets_seated, *tubes_full, uta_final,
              *uta_sockets_final, spider_final, sec_final,
-             back_final, front_final, *bracket_final, mirror],
+             back_final, front_final, *bracket_final, *m8_shafts, mirror],
             arrows=None,
             center=(0, 0, 600), span=750, elev=5, azim=-60,
         )
