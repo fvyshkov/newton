@@ -62,11 +62,52 @@ OUT_FILE = OUT_DIR / "Spider_4vane.stl"
 
 def main():
     # Печатаем плашмя, плоскость лопастей = XY, толщина 3мм по Z.
+    #
+    # Стратегия "монолит": сначала union всех объёмов (hub + 4 лопасти + 4 пятки),
+    # ПОТОМ вычитание всех отверстий. Лопасти проходят сквозь центр hub'а
+    # (от r=-HUB_R-2 до r=HUB_R+VANE_LEN+TIP_RADIAL), чтобы у union было
+    # твёрдое объёмное перекрытие, а не касание по тангенциальной линии.
+    # Без этого trimesh выдаёт 5 разрозненных тел в одном STL.
+
+    rot_y90 = trimesh.transformations.rotation_matrix(
+        math.radians(90), [0, 1, 0]
+    )
 
     # 1) Hub в центре
-    hub = trimesh.creation.cylinder(radius=HUB_R, height=HUB_T, sections=SEG)
-    hub.apply_translation([0, 0, HUB_T / 2.0])
-    body = hub
+    body = trimesh.creation.cylinder(radius=HUB_R, height=HUB_T, sections=SEG)
+    body.apply_translation([0, 0, HUB_T / 2.0])
+
+    # 2) Лопасти — проходят СКВОЗЬ hub для гарантированного перекрытия.
+    VANE_INNER = -(HUB_R + 2.0)              # внутренний край (за центром)
+    VANE_OUTER = HUB_R + VANE_LEN            # внешний край (r=110)
+    VANE_FULL_LEN = VANE_OUTER - VANE_INNER  # 124мм
+
+    for ang_deg in VANE_ANGLES:
+        rot = trimesh.transformations.rotation_matrix(
+            math.radians(ang_deg), [0, 0, 1]
+        )
+
+        # --- Лопасть ---
+        vane = trimesh.creation.box(
+            extents=(VANE_FULL_LEN, VANE_WIDTH, VANE_THICK)
+        )
+        vane.apply_translation([
+            (VANE_INNER + VANE_OUTER) / 2.0, 0, VANE_THICK / 2.0
+        ])
+        vane.apply_transform(rot)
+        body = body.union(vane)
+
+        # --- Пятка (tip) --- врастает в лопасть на 0.5мм для объёмного union
+        tip = trimesh.creation.box(
+            extents=(TIP_RADIAL, TIP_WIDTH, TIP_HEIGHT)
+        )
+        tip.apply_translation(
+            [VANE_OUTER + TIP_RADIAL / 2.0 - 0.5, 0, TIP_HEIGHT / 2.0]
+        )
+        tip.apply_transform(rot)
+        body = body.union(tip)
+
+    # 3) ВСЕ отверстия — после полной сборки объёмов
 
     # Центральное M5 отверстие в hub
     hub_hole = trimesh.creation.cylinder(
@@ -81,63 +122,35 @@ def main():
         height=HUB_NUT_DEPTH,
         sections=6,
     )
-    # центр кармана: на нижней грани (z=0), уходит вверх на NUT_DEPTH
     hex_pocket.apply_translation([0, 0, HUB_NUT_DEPTH / 2.0])
     body = body.difference(hex_pocket)
 
-    # 2) Лопасти + пятки на каждом угле
+    # Отверстия и hex карманы в пятках
     for ang_deg in VANE_ANGLES:
-        # --- Лопасть ---
-        vane = trimesh.creation.box(
-            extents=(VANE_LEN, VANE_WIDTH, VANE_THICK)
-        )
-        # Сдвинуть так чтобы внутренний конец у hub_R, внешний у hub_R + VANE_LEN
-        vane.apply_translation([HUB_R + VANE_LEN / 2.0, 0, VANE_THICK / 2.0])
-
-        # Поворот на угол лопасти
         rot = trimesh.transformations.rotation_matrix(
             math.radians(ang_deg), [0, 0, 1]
         )
-        vane.apply_transform(rot)
-        body = body.union(vane)
-
-        # --- Пятка (tip) ---
-        tip = trimesh.creation.box(
-            extents=(TIP_RADIAL, TIP_WIDTH, TIP_HEIGHT)
-        )
-        # Сдвинуть так чтобы внутренний край пятки на r = HUB_R + VANE_LEN = 110
-        # внешний край — на r = 120 (UTA_ID/2)
-        tip.apply_translation(
-            [HUB_R + VANE_LEN + TIP_RADIAL / 2.0, 0, TIP_HEIGHT / 2.0]
-        )
-        tip.apply_transform(rot)
-        body = body.union(tip)
 
         # M5 сквозное отверстие в пятке (ось радиальная)
         tip_hole = trimesh.creation.cylinder(
             radius=TIP_M5_HOLE_R, height=TIP_RADIAL * 3, sections=32
         )
-        rot_y90 = trimesh.transformations.rotation_matrix(
-            math.radians(90), [0, 1, 0]
-        )
         tip_hole.apply_transform(rot_y90)
         tip_hole.apply_translation(
-            [HUB_R + VANE_LEN + TIP_RADIAL / 2.0, 0, TIP_HEIGHT / 2.0]
+            [VANE_OUTER + TIP_RADIAL / 2.0, 0, TIP_HEIGHT / 2.0]
         )
         tip_hole.apply_transform(rot)
         body = body.difference(tip_hole)
 
         # Hex карман на ВНУТРЕННЕЙ грани пятки под M5 гайку
-        # (карман открывается со стороны hub, бортом 5мм)
         tip_nut = trimesh.creation.cylinder(
             radius=TIP_NUT_AF / math.cos(math.radians(30)) / 2.0,
             height=TIP_NUT_DEPTH,
             sections=6,
         )
         tip_nut.apply_transform(rot_y90)
-        # карман на радиальной позиции — у внутренней грани пятки
         tip_nut.apply_translation([
-            HUB_R + VANE_LEN + TIP_NUT_DEPTH / 2.0,
+            VANE_OUTER + TIP_NUT_DEPTH / 2.0,
             0,
             TIP_HEIGHT / 2.0,
         ])

@@ -84,6 +84,18 @@ WING_Z_BOT = 80.0
 WING_Z_TOP = 130.0
 WING_BOLT_R = 2.75               # Ø5.5 clearance под M5
 
+# === Corner bridge — заполняет диагональный gap между крыльями и зажимом ===
+# Без этого крылья (на (151..156)) и цилиндр зажима (центр 167, r=17) не имеют
+# объёмного перекрытия в union — получаются 3 разрозненных тела в STL.
+# Bridge — кубик 7×7×50мм в углу (150..157, 150..157, z=80..130),
+# который ОБЯЗАТЕЛЬНО перекрывается и с обоими крыльями (≥1мм), и с цилиндром.
+BRIDGE_X_MIN = BOX_OUTER_HALF - 1.0        # 150 (на 1мм внутрь от стенки коробки)
+BRIDGE_X_MAX = BOX_OUTER_HALF + 6.0        # 157 (внутри цилиндра: r от центра ≈14<17)
+BRIDGE_Y_MIN = BOX_OUTER_HALF - 1.0
+BRIDGE_Y_MAX = BOX_OUTER_HALF + 6.0
+BRIDGE_Z_BOT = WING_Z_BOT
+BRIDGE_Z_TOP = WING_Z_TOP
+
 # === Прочее ===
 SEG = 96
 OUT_DIR = Path(__file__).parent
@@ -186,7 +198,22 @@ def main():
     hex_pocket.apply_translation([BODY_X, BODY_Y, LUG_Z_CENTER])
     body = body.difference(hex_pocket)
 
-    # 5) L-фланец — два крыла на -X и -Y стенках клипсы.
+    # 5a) Corner bridge — заполняет диагональный gap между крыльями и зажимом.
+    # Без bridge'а у крыльев нет объёмного перекрытия с цилиндром (есть только
+    # потенциальное касание по линии), и union даёт 3 разрозненных тела в STL.
+    bridge = trimesh.creation.box(extents=(
+        BRIDGE_X_MAX - BRIDGE_X_MIN,
+        BRIDGE_Y_MAX - BRIDGE_Y_MIN,
+        BRIDGE_Z_TOP - BRIDGE_Z_BOT,
+    ))
+    bridge.apply_translation([
+        (BRIDGE_X_MIN + BRIDGE_X_MAX) / 2.0,
+        (BRIDGE_Y_MIN + BRIDGE_Y_MAX) / 2.0,
+        (BRIDGE_Z_BOT + BRIDGE_Z_TOP) / 2.0,
+    ])
+    body = body.union(bridge)
+
+    # 5b) L-фланец — два крыла на -X и -Y стенках клипсы.
     # Крыло #1 — лежит на +X стенке коробки СНАРУЖИ (т.е. при x = BOX_OUTER_HALF + WING_THICK/2)
     # Простирается тангенциально в направлении -Y от угла коробки.
     wing1 = trimesh.creation.box(
