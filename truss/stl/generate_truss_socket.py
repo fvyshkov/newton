@@ -36,6 +36,7 @@ import math
 from pathlib import Path
 
 import trimesh
+from trimesh.transformations import rotation_matrix
 
 # === Привязка к Mirror_box.stl ===
 BOX_OUTER_HALF = 302.0 / 2.0     # 151мм (внешний полуразмер коробки)
@@ -176,27 +177,31 @@ def main():
         BODY_OD_R + LUG_RADIAL / 2.0, 0, 0
     ])
     # повернуть на 45° к мировому фрейму
-    clamp_bolt.apply_transform(rot)
-    clamp_bolt.apply_translation([BODY_X, BODY_Y, LUG_Z_CENTER])
-    body = body.difference(clamp_bolt)
-
-    # Hex карман в одной из проушин под гайку M5 (со стороны -Y в локалке)
+    # Hex карман — СКВОЗНОЙ через всё ушко (а не блайнд 5мм).
+    # Так нет "задней стенки" hex'а (шестиугольник-минус-круг), которая
+    # триангулируется как уродливая звезда от вершин гайки к окружности болта.
+    # Гайка упирается на ВНУТРЕННЮЮ грань ушка (у щели), это структурно
+    # эквивалентно карману с задней стенкой.
+    # Длина hex'а: вся толщина ушка (LUG_TANG = 9мм) + запас по 0.5мм с
+    # обеих сторон чтобы boolean был чистый.
     hex_pocket = trimesh.creation.cylinder(
         radius=CLAMP_NUT_AF / math.cos(math.radians(30)) / 2.0,
-        height=CLAMP_NUT_DEPTH,
+        height=LUG_TANG + 1.0,
         sections=6,
     )
     hex_pocket.apply_transform(rot_to_y)  # ось по Y в локалке
-    # положение: радиальная позиция проушины, тангенциально на -Y стороне,
-    # внутрь от внешнего края проушины
+    # Центр hex'а по Y: середина ушка = -(SLIT_W/2 + LUG_TANG/2) = -5.5
     hex_pocket.apply_translation([
         BODY_OD_R + LUG_RADIAL / 2.0,
-        -(SLIT_W / 2.0 + LUG_TANG - CLAMP_NUT_DEPTH / 2.0),
+        -(SLIT_W / 2.0 + LUG_TANG / 2.0),
         0
     ])
-    hex_pocket.apply_transform(rot)
-    hex_pocket.apply_translation([BODY_X, BODY_Y, LUG_Z_CENTER])
-    body = body.difference(hex_pocket)
+
+    # Объединяем болт + СКВОЗНОЙ hex в один cutter и subtract одной операцией.
+    cutter = clamp_bolt.union(hex_pocket)
+    cutter.apply_transform(rot)
+    cutter.apply_translation([BODY_X, BODY_Y, LUG_Z_CENTER])
+    body = body.difference(cutter)
 
     # 5a) Corner bridge — заполняет диагональный gap между крыльями и зажимом.
     # Без bridge'а у крыльев нет объёмного перекрытия с цилиндром (есть только
