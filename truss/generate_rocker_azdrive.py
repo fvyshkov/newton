@@ -80,7 +80,10 @@ PIN_PITCH_R = MODULE * PIN_TEETH / 2.0     # 16
 PIN_TIP_R = PIN_PITCH_R + ADDENDUM         # 18
 PIN_ROOT_R = PIN_PITCH_R - DEDENDUM        # 13.5
 PIN_FACE = 12.0         # ширина венца шестерни, мм
-PIN_BORE = 8.0 + 0.2    # бор под вал Ø8 (+0.2 посадка)
+PIN_BORE = 8.0 + 0.4    # бор под вал Ø8 (+0.4: FDM-отверстия печатаются уже
+                        # номинала — проверено тестом 03.07: +0.2 шлифованный
+                        # вал 8.00 не лезет; финальная фиксация всё равно сетскрю)
+TEST_BORE = 8.5         # свободные отверстия теста (вал должен скользить)
 HUB_D = 20.0            # Ø ступицы
 HUB_H = 8.0             # высота ступицы
 SET_HOLE = 3.2          # Ø радиального отверстия под M3-фиксатор
@@ -297,22 +300,34 @@ def rocker_mesh_test():
     boss = cyl(8.0, BOSS_H + 1, T=tr(CENTER_DIST, 0, (BOSS_H + 1) / 2 - 1))
     part = part.union(boss)
 
-    # П-вилка: ДВЕ колонны по бокам шестерни (tip R18 → зазор ≥3мм по Y)
-    # и перекладина-МОСТИК между ними: печатается без поддержек (в отличие
-    # от Г-консоли), ось держится в двух точках. Низ перекладины z=26
-    # (шестерня+ступица до z=22 → зазор 4мм).
+    # ДВЕ колонны по бокам шестерни (tip R18 → зазор ≥3мм по Y). Перекладина —
+    # ОТДЕЛЬНАЯ плоская деталь на 2 винтах M3 (Rocker_mesh_bridge): мостик с
+    # отверстием посередине печатал периметры в воздухе → лохмотья и заросшее
+    # отверстие (опыт печати 03.07). Плоская деталь на столе = идеальная дырка.
     for ys in (+1, -1):
         col = box(12, 10, 34, T=tr(CENTER_DIST, ys * 27, 34 / 2 - 2))
         part = part.union(col)
-    arm = box(16, 64, 6, T=tr(CENTER_DIST, 0, 29))
-    part = part.union(arm)
+        # пилот под саморез M3 в торец колонны (Ø2.7, глубина 12)
+        pilot = cyl(2.7 / 2, 12, seg=24, T=tr(CENTER_DIST, ys * 27, 32 - 6))
+        part = part.difference(pilot)
 
-    # Ось Ø8.2: сквозь ухо, воздух и подпятник в основание
-    axle = cyl(PIN_BORE / 2, 42, seg=48, T=tr(CENTER_DIST, 0, 13))
+    # Ось Ø8.5 (скользящая): через подпятник в основание
+    axle = cyl(TEST_BORE / 2, 30, seg=48, T=tr(CENTER_DIST, 0, 7))
     part = part.difference(axle)
 
     part.apply_translation([-242, 0, TEST_BASE_T])   # к началу координат, низ z=0
     return finish(part, "Rocker_mesh_test")
+
+
+def rocker_mesh_bridge():
+    """Перекладина вилки теста — плоская, печатается отдельно на столе.
+    Прикручивается 2 саморезами M3 к торцам колонн, в центре — скользящее
+    отверстие Ø8.5 под вал шестерни."""
+    plate = box(16, 64, 6, T=tr(0, 0, 3))
+    bore = cyl(TEST_BORE / 2, 8, seg=48, T=tr(0, 0, 3))
+    screws = [cyl(3.4 / 2, 8, seg=24, T=tr(0, ys * 27, 3)) for ys in (+1, -1)]
+    part = plate.difference([bore] + screws)
+    return finish(part, "Rocker_mesh_bridge")
 
 
 def main():
@@ -324,6 +339,7 @@ def main():
     rocker_ring_segment()
     rocker_pinion()
     rocker_mesh_test()
+    rocker_mesh_bridge()
     print(f"\nГотово → {OUTDIR}")
     print("Сначала печатаем Rocker_mesh_test + шестерню, проверяем зацепление,")
     print("потом 4× Rocker_ring_segment (сегмент 90° ~320×92мм — стол H2D 350×320).")
