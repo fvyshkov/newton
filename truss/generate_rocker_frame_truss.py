@@ -94,6 +94,22 @@ HUB_R = 15.0            # радиус ядра-сферы: хомуты вых�
                         #   упирается в ядро (глухой упор)
 ICO_SUB = 3             # подразбиение икосферы ядра
 
+# --- Тест-посадки трубы + сквозная расточка бора (эталон: generate_rocker_towers) ---
+TUBE_D = 22.0           # номинал алюминиевой трубы
+GRIP = 40.0            # требуемая глубина посадки, мм
+DRILL_D = TC.BORE       # Ø22.4 — сквозная расточка бора через ядро
+FIT_TOL = 8.0          # порог теста: <8% объёма трубы = PASS
+# STAGGER (узел 270°): две ноги башни к apexR/apexL всего ~37.5° апарт → их боры
+# пересекаются у ядра и «палка не влезет» (тело одной ноги перекрывает вход другой).
+# Заднюю ногу (к apexL) выносим вдоль её оси на DRIVE_LEG_STAGGER: её воротник с
+# ушками+болтом уходит наружу, входные торцы двух ног разнесены по оси → каждая
+# труба входит на полный грип. Гэп ядро→воротник заполняем струтом, затем сквозная
+# расточка бора Ø22.4 (труба садится в ПУСТОЙ бор). Хорды (60°) и радиали не трогаем.
+DRIVE_LEG_STAGGER = 24.0
+# ЦЕНТР: воротник радиали вынесен за втулку M10 (Ø22), расточка бора только снаружи
+CENTER_RADIAL_OFF = 16.0    # вынос воротника радиали наружу от оси, мм (> R втулки 11)
+CENTER_DRILL_START = 13.0   # начало сквозной расточки (снаружи втулки r11 → цела)
+
 # --- Привод (узел 270°): минимальный пад 4×M4 + проём под шестерню ---
 PAD_X = 56.0            # пад под Rocker_swing_base, X
 PAD_Y = 62.0            # пад, Y (тянется наружу к PINION_R)
@@ -188,6 +204,43 @@ def clamp_toward(node, endpoint, height=CLAMP_H):
     return TC.place_clamp(height, node, tube_dir=d, slit_dir=slit_for(node, d))
 
 
+def axis_cyl(direction, z0, z1, dia, origin=(0.0, 0.0, 0.0), seg=48):
+    """Цилиндр Ø`dia` вдоль `direction`, от параметра z0 до z1 по оси, отсчёт от
+    `origin`. Для сквозной расточки бора и для пробника tube-fit."""
+    d = np.asarray(direction, float); d /= np.linalg.norm(d)
+    o = np.asarray(origin, float)
+    L = float(z1 - z0)
+    c = trimesh.creation.cylinder(radius=dia / 2.0, height=L, sections=seg)
+    T = trimesh.geometry.align_vectors([0, 0, 1], d)
+    T[:3, 3] = o + d * (z0 + L / 2.0)
+    c.apply_transform(T)
+    return c
+
+
+def drill_bores(part, sockets):
+    """Сквозная расточка бора Ø DRILL_D по каждому сокету: от z=−3 (сквозь ядро) до
+    входного торца воротника (entry). Бор чист на полный грип, тело соседей на пути
+    расточено → труба всегда входит до упора."""
+    cuts = [axis_cyl(d, -3.0, entry, DRILL_D, origin=o) for _, o, d, entry in sockets]
+    return trimesh.boolean.difference([part] + cuts, engine="manifold")
+
+
+def tube_fit_test(part, sockets, name):
+    """ТЕСТ ПОСАДКИ: Ø22 цилиндр длиной GRIP от входа бора ВНУТРЬ; пересечение с
+    телом узла < FIT_TOL% объёма трубы = PASS (труба сидит в ПУСТОМ боре)."""
+    tvol = math.pi * (TUBE_D / 2.0) ** 2 * GRIP
+    all_pass = True
+    for label, o, d, entry in sockets:
+        t = axis_cyl(d, entry - GRIP, entry, TUBE_D, origin=o)
+        it = trimesh.boolean.intersection([part, t], engine="manifold")
+        vol = abs(it.volume) if (it is not None and len(it.vertices)) else 0.0
+        frac = vol / tvol * 100.0
+        ok = frac < FIT_TOL
+        all_pass = all_pass and ok
+        print(f"    tube-fit {name}:{label:<14} {frac:5.1f}%  {'PASS' if ok else 'FAIL'}")
+    return all_pass
+
+
 def to_bed(part, T=None):
     """Развернуть в позу печати (опц. T), затем центрировать по XY и опустить
     z_min=0 на стол."""
@@ -250,11 +303,23 @@ def corner_node(ang, drive=False):
     + минимальный пад 4×M4 под Rocker_swing_base и вертикальный проём Ø40 под
     шестерню. Ничего лишнего."""
     node, eps = endpoints_for_corner(ang)
+    name = "Rocker_corner_drive" if drive else f"Rocker_corner_node_{int(ang)}"
 
     part = trimesh.creation.icosphere(subdivisions=ICO_SUB, radius=HUB_R)
     part.apply_translation(node)
-    for _tag, ep in eps:
-        part = part.union(clamp_toward(node, ep))
+    # сокеты: (label, node, dir, entry). Для привода — STAGGER задней ноги (apexL).
+    sockets = []
+    for tag, ep in eps:
+        d = np.asarray(ep, float) - node
+        d /= np.linalg.norm(d)
+        off = DRIVE_LEG_STAGGER if (drive and tag == "tower→apexL") else 0.0
+        origin = node + d * off
+        part = part.union(TC.place_clamp(CLAMP_H, origin, tube_dir=d,
+                                         slit_dir=slit_for(node, d)))
+        if off > 0.5:   # струт ядро→вынесенный воротник (сваривает; потом расточится)
+            part = part.union(axis_cyl(d, -8.0, off + 8.0, CLAMP_OD,
+                                       origin=node, seg=SEG))
+        sockets.append((tag, node.copy(), d, off + CLAMP_H))
 
     cuts = []
     if drive:
@@ -275,10 +340,13 @@ def corner_node(ang, drive=False):
     if cuts:
         part = part.difference(cuts)
 
+    part = drill_bores(part, sockets)          # сквозной пустой бор на каждый сокет
+    ok = tube_fit_test(part, sockets, name)
+    assert ok, f"{name}: tube-fit FAIL — палка не влезет"
+
     # поза печати: развернуть вокруг Z (наружу-радиаль угла → +X)
     yaw = trimesh.transformations.rotation_matrix(math.radians(-ang), [0, 0, 1])
     part = to_bed(part, yaw)
-    name = "Rocker_corner_drive" if drive else f"Rocker_corner_node_{int(ang)}"
     return finish(part, name)
 
 
@@ -295,8 +363,15 @@ def midchord_node():
 
     part = trimesh.creation.icosphere(subdivisions=ICO_SUB, radius=HUB_R)
     part.apply_translation(m)
-    for _tag, ep in eps:
+    sockets = []
+    for tag, ep in eps:
         part = part.union(clamp_toward(m, ep))
+        d = np.asarray(ep, float) - m; d /= np.linalg.norm(d)
+        sockets.append((tag, np.asarray(m, float), d, CLAMP_H))
+
+    part = drill_bores(part, sockets)          # сквозной пустой бор на каждый сокет
+    ok = tube_fit_test(part, sockets, "Rocker_midchord_node")
+    assert ok, "Rocker_midchord_node: tube-fit FAIL"
 
     # поза печати: развернуть вокруг Z так, что радиаль-к-центру → −X.
     # радиаль mAB→центр = (0,−1,0); yaw −90° переводит −Y → −X.
@@ -318,8 +393,22 @@ def center_node():
     part = part.union(cyl(BUSH_OD / 2, BUSH_Z1 - BUSH_Z0,
                           T=tr(0, 0, (BUSH_Z0 + BUSH_Z1) / 2)))
 
-    for m in mids:                                    # 3 радиали к серединам хорд
-        part = part.union(clamp_toward(node, m))
+    # 3 радиали к серединам хорд. Центр занят ВТУЛКОЙ M10 (Ø22) — бор радиали нельзя
+    # сверлить через ось. Поэтому воротник радиали ВЫНОСИМ наружу за втулку на
+    # CENTER_RADIAL_OFF, тело ядро→воротник — струт, а сквозная расточка бора идёт
+    # только ОТ CENTER_DRILL_START (снаружи втулки) наружу → втулка/M10 целы, а
+    # тестовая зона трубы [off, off+GRIP] лежит в ПУСТОМ боре за втулкой.
+    node0 = np.asarray(node, float)
+    sockets = []
+    for m in mids:
+        d = np.asarray(m, float) - node0; d /= np.linalg.norm(d)
+        origin = node0 + d * CENTER_RADIAL_OFF
+        part = part.union(TC.place_clamp(CLAMP_H, origin, tube_dir=d,
+                                         slit_dir=slit_for(node0, d)))
+        part = part.union(axis_cyl(d, 8.0, CENTER_RADIAL_OFF + 8.0, CLAMP_OD,
+                                   origin=node0, seg=SEG))     # струт втулка→воротник
+        sockets.append((f"radial→{origin[:2].round(0)}", node0, d,
+                        CENTER_RADIAL_OFF + CLAMP_H))
 
     # полка энкодера: стойка (−Y, вне щелей/радиалей) + горизонтальный таб над осью
     post = box(SHELF_W, POST_DY, SHELF_TOP_Z - POST_Z0,
@@ -333,7 +422,13 @@ def center_node():
         cuts.append(cyl(M3_SELFTAP / 2, PILOT_DEPTH + 1, seg=24,
                         T=tr(sx * PILOT_XY[0], PILOT_XY[1],
                              SHELF_TOP_Z + 1 - (PILOT_DEPTH + 1) / 2)))
+    # сквозная расточка бора радиалей — ТОЛЬКО за втулкой (от CENTER_DRILL_START)
+    for _tag, o, d, entry in sockets:
+        cuts.append(axis_cyl(d, CENTER_DRILL_START, entry, DRILL_D, origin=o))
     part = part.difference(cuts)
+
+    ok = tube_fit_test(part, sockets, "Rocker_center_node")
+    assert ok, "Rocker_center_node: tube-fit FAIL"
 
     part = to_bed(part)        # втулка вертикальна, плоский низ на стол
     return finish(part, "Rocker_center_node")

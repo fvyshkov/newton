@@ -96,6 +96,12 @@ SEAT_TOP = RING_Z       # верх седла = низ тела венца (z=50
 
 SEG = 96
 OUTDIR = Path(__file__).parent / "stl"
+ENGINE = "manifold"
+
+# --- Тест посадки трубы: Ø22 цилиндр длиной GRIP от входа бора внутрь ---
+TUBE_FIT_D = 22.0       # идеальная труба Ø22 (номинал, бор Ø22.4)
+TUBE_FIT_GRIP = 40.0    # требуемая глубина посадки, мм
+TUBE_FIT_MAX = 0.08     # труба должна сидеть в ПОЛОМ боре ⇒ пересечение <8%
 
 TUBE_SPAN = R_TUBE_OUT - R_TUBE_IN    # ≈ 250 мм (радиальный пролёт хаб→лапа)
 
@@ -168,6 +174,51 @@ def finish(mesh, name, reorient=None):
     return mesh
 
 
+def bore_cut(origin, tube_dir, length, r=11.2):
+    """Цилиндр-вырез Ø22.4 (бор трубы) вдоль оси сокета от `origin` наружу на
+    `length` — переоткрывает бор ПОСЛЕ приварки ядра/стопы: убирает материал,
+    залезший в полый бор, но НЕ трогает стенки хомута (кольцо R11.2..15.2) → сварка
+    цела, а труба садится на полную глубину."""
+    d = np.asarray(tube_dir, float); d /= np.linalg.norm(d)
+    center = np.asarray(origin, float) + d * (length / 2.0)
+    R = trimesh.geometry.align_vectors([0, 0, 1], d)
+    R[:3, 3] = center
+    return cyl(r, length, seg=48, T=R)
+
+
+def tube_fit_socket(part, origin, tube_dir, height, grip=TUBE_FIT_GRIP):
+    """Ø22 цилиндр длиной grip от ВХОДА бора (дальний торец хомута, origin+dir*height)
+    ВНУТРЬ (к origin) — пересекаем с телом узла. Труба обязана сидеть в ПОЛОМ боре ⇒
+    пересечение с телом < 8% объёма трубы. Возвращает долю заполнения."""
+    o = np.asarray(origin, float)
+    d = np.asarray(tube_dir, float); d /= np.linalg.norm(d)
+    entry = o + d * height                       # торец, куда входит труба
+    center = entry - d * (grip / 2.0)            # центр тестового цилиндра
+    R = trimesh.geometry.align_vectors([0, 0, 1], d)   # ось +Z → dir
+    R[:3, 3] = center
+    tube = cyl(TUBE_FIT_D / 2, grip, seg=48, T=R)
+    v_tube = math.pi * (TUBE_FIT_D / 2) ** 2 * grip
+    try:
+        it = trimesh.boolean.intersection([part, tube], engine=ENGINE)
+        v_it = abs(it.volume) if it is not None and len(it.faces) else 0.0
+    except Exception:
+        v_it = float("nan")
+    return v_it / v_tube
+
+
+def run_tube_fit(part, sockets):
+    """Печатает PASS/FAIL посадки трубы на полную глубину грипа для каждого сокета."""
+    print(f"  ТЕСТ ПОСАДКИ ТРУБ (Ø{TUBE_FIT_D:.0f}×{TUBE_FIT_GRIP:.0f} от входа бора внутрь; "
+          f"PASS <{TUBE_FIT_MAX*100:.0f}%):")
+    ok_all = True
+    for nm, o, d, h in sockets:
+        frac = tube_fit_socket(part, o, d, h)
+        ok = frac < TUBE_FIT_MAX
+        ok_all = ok_all and ok
+        print(f"    {nm:16s} заполнение {frac*100:5.1f}%  {'PASS' if ok else 'FAIL'}")
+    return ok_all
+
+
 # ============================ 1. ХАБ ============================
 def rocker_hub_truss():
     """3 чистых хомута из ЦЕНТРА наружу под 120° (направления — из координат концов
@@ -177,16 +228,24 @@ def rocker_hub_truss():
     вертикальна, плоское дно ядра на столе."""
     hub = np.array([0.0, 0.0, Z_ARM])                    # глухой центр (origin хомутов)
     clamps = []
+    sockets = []
     for ang in CORNER_ANGLES:
         _, p_out = tube_pts(ang)                         # внешний конец трубы (лапа)
-        clamps.append(clamp_entry(hub, p_out, HUB_CLAMP_H))   # ось хаб→лапа, болт снаружи
+        d = (p_out - hub); d = d / np.linalg.norm(d)     # ось хаб→лапа
+        clamps.append(clamp_entry(hub, p_out, HUB_CLAMP_H))   # болт снаружи (вход трубы)
+        sockets.append((f"hub_{ang:.0f}", hub, d, HUB_CLAMP_H))
     core = cyl(HUB_CORE_R, HUB_CORE_H, T=tr(0, 0, Z_ARM))     # минимальное ядро-склейка
     part = core.union(clamps)
 
     m10 = cyl(M10_CLR / 2, 80, T=tr(0, 0, Z_ARM))
     nut = cyl(NUT10_AF / math.sqrt(3), NUT10_DEPTH, seg=6,
               T=tr(0, 0, Z_ARM - 24 + 4))                     # карман открыт вниз
-    part = part.difference([m10, nut])
+    # СКВОЗНАЯ расточка бора Ø22.4 по каждому лучу — ядро НЕ должно заполнять полый
+    # бор (иначе труба не садится на полный грип). Стенки хомута (кольцо снаружи
+    # бора) целы → сварка держит, а бор чист.
+    bores = [bore_cut(hub - d * 3.0, d, HUB_CLAMP_H + 3.0) for _, _, d, _ in sockets]
+    part = part.difference([m10, nut] + bores)
+    run_tube_fit(part, sockets)                              # труба входит на полный грип?
     return finish(part, "Rocker_hub_truss")
 
 
@@ -206,7 +265,13 @@ def rocker_leg_truss():
     part = clamp.union(foot)
 
     tap = cyl(M4_TAP / 2, 24, seg=32, T=tr(r_ctr, 0, 11))     # M4 винт-ножка (самонарез)
-    part = part.difference([tap])
+    d = (p_in - p_out); d = d / np.linalg.norm(d)             # ось терминал→хаб
+    # расточка бора Ø22.4: стопа-пад приварена к НИЗУ хомута, но её верх (z=30)
+    # лез в полый бор (ось z=32) и не давал трубе сесть. Убираем материал внутри
+    # бора — стопа держится за стенки хомута снаружи бора.
+    bore = bore_cut(p_out, d, CLAMP_H_ARM)
+    part = part.difference([tap, bore])
+    run_tube_fit(part, [("leg", p_out, d, CLAMP_H_ARM)])
     return finish(part, "Rocker_leg_truss")
 
 
@@ -228,6 +293,8 @@ def rocker_ring_saddle_tube():
                     (SEAT_Z0 + SEAT_TOP) / 2))
     part = clamp.union(seat)
 
+    d = (p_out - sad_in); d = d / np.linalg.norm(d)           # ось наружу (труба сквозная)
+    run_tube_fit(part, [("ring_saddle", sad_in, d, CLAMP_H_ARM)])
     # переориентация: бор радиальный (+X) → вертикаль (+Z), печать без поддержек
     return finish(part, "Rocker_ring_saddle_tube", reorient=roty(-90))
 
