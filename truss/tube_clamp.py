@@ -79,25 +79,28 @@ def _tr(x, y, z):
 
 # ============================ ГЕОМЕТРИЯ ХОМУТА ============================
 def clamp_cyl(height):
-    """Чистый разрезной цилиндр-хомут в каноне: ось бора +Z в (0,0), низ z=0,
-    прорезь (щель) смотрит на +X, две проушины с отверстием M5 поперёк (вдоль Y).
-    (эталон: truss/_proto_reference.py::clamp_cyl)"""
+    """Чистый разрезной цилиндр-хомут в каноне: ось бора +Z в (0,0), низ z=0
+    (у ЯДРА узла), верх z=height (наружу, куда ВХОДИТ труба). Прорезь на +X.
+    Болт затяжки + проушины сдвинуты к НАРУЖНОМУ торцу (BZ), где труба точно
+    внутри — а не в середину/к ядру, где труба упирается или её нет (правка
+    по фидбеку). (эталон: truss/_proto_reference.py::clamp_cyl)"""
+    BZ = height - 11.0                       # ось болта у наружного (входного) торца
     body = _cyl(OD / 2, height, _tr(0, 0, height / 2))
     bore = _cyl(BORE / 2, height + 2, _tr(0, 0, height / 2))
     part = _dif(body, [bore])
-    # щель разреза: тонкий вырез от бора наружу по +X
+    # щель разреза: тонкий вырез от бора наружу по +X (по всей высоте)
     slit = _box(OD, SLIT, height + 2, _tr(OD / 2, 0, height / 2))
     part = _dif(part, [slit])
-    # две проушины по бокам щели (по ±Y от неё)
+    # две проушины по бокам щели (по ±Y), КОРОТКИЕ, у наружного торца (на BZ)
     ears = []
     for sy in (+1, -1):
-        e = _box(EAR + WALL, WALL, height,
-                 _tr(OD / 2 + (EAR + WALL) / 2 - WALL, sy * (WALL / 2 + 1.1), height / 2))
+        e = _box(EAR + WALL, WALL, 16,
+                 _tr(OD / 2 + (EAR + WALL) / 2 - WALL, sy * (WALL / 2 + 1.1), BZ))
         ears.append(e)
     part = _uni([part] + ears)
-    # отверстие болта M5 поперёк проушин (вдоль Y)
+    # отверстие болта M5 поперёк проушин (вдоль Y), на BZ
     bolt = _cyl(M5 / 2, OD + 2 * EAR + 8,
-                _tr(OD / 2 + EAR / 2, 0, height / 2)
+                _tr(OD / 2 + EAR / 2, 0, BZ)
                 @ trimesh.transformations.rotation_matrix(math.radians(90), [1, 0, 0]))
     part = _dif(part, [bolt])
     part.merge_vertices()
