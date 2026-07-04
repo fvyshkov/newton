@@ -65,13 +65,27 @@ def main():
     outdir.mkdir(parents=True, exist_ok=True)
     tmp = Path(tempfile.mkdtemp(prefix="autoslice_"))
 
+    # 0. посадка на стол: каждый STL принудительно опускается до z=0
+    #    (защита от «висящих в воздухе» моделей и паразитных поддержек)
+    import trimesh
+    grounded = []
+    for i, s in enumerate(args.stls):
+        m = trimesh.load(str(Path(s).resolve()))
+        dz = -m.bounds[0][2]
+        if abs(dz) > 1e-6:
+            m.apply_translation([0, 0, dz])
+            print(f"   {Path(s).name}: посажен на стол (dz={dz:+.2f})")
+        g = tmp / f"grounded_{i:02d}_{Path(s).stem}.stl"
+        m.export(g)
+        grounded.append(str(g))
+
     # 1. проект из STL
     code, errs = run([STUDIO,
                       "--load-settings", f"{MACHINE};{PROCESS}",
                       "--load-filaments", str(FILAMENT),
                       "--arrange", "1", "--orient", "0",
                       "--export-3mf", "raw.3mf", "--outputdir", str(tmp)]
-                     + [str(Path(s).resolve()) for s in args.stls], tmp)
+                     + grounded, tmp)
     if not (tmp / "raw.3mf").exists():
         sys.exit(f"сборка проекта не удалась: {errs}")
 
@@ -104,8 +118,13 @@ def main():
     import re
     stats = dict(re.findall(r'"(prediction|weight)" value="([^"]+)"', info))
     mins = int(stats.get("prediction", 0)) // 60
+    # превью раскладки — рядом с результатом
+    preview = final.with_suffix(".preview.png")
+    with open(preview, "wb") as fh:
+        fh.write(z.read("Metadata/plate_1.png"))
     print(f"OK → {final}")
     print(f"   ~{mins // 60}ч{mins % 60:02d}м, {stats.get('weight', '?')} г")
+    print(f"   превью: {preview}")
     shutil.rmtree(tmp, ignore_errors=True)
 
 
