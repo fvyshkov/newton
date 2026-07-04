@@ -277,7 +277,11 @@ RING_Z = 50            # ring segments occupy z=50..60, track top = 60
 FRAME_Z = 75           # tube axis height of the rotating frame
 WHEEL_X = 170          # wheel mid-planes at x=±170 (outer-outer ≈ 360)
 ALT_AXIS = (WHEEL_X, 0.0, 590.0)
-APEX_Z = 530           # tower tubes + cross tube meet here (cradles slide on it)
+# APEX_Z lowered so the cross tube + apex nodes sit BELOW the Ø200 wheel rim bottom
+# (rim bottom = ALT_AXIS_z − 100 = 490). At 460 the cross-tube top (471) clears the
+# rim by ~19 mm and the apex node top (~476) by ~14 mm; the cradle then lifts the
+# rollers UP from the cross tube to the rim (see generate_rocker_towers).
+APEX_Z = 460           # tower tubes + cross tube meet here (cradles clamp it, below the rim)
 PINION_R = 240         # ring pitch 224 + pinion pitch 16
 MOTOR_R = 181.4        # belt center distance 58.6
 
