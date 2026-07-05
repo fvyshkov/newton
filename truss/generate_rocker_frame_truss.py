@@ -335,8 +335,16 @@ def corner_node(ang, drive=False):
     cuts = []
     if drive:
         pad = box(PAD_X, PAD_Y, PAD_T, tr(0, PAD_CTR_Y, PAD_TOP_Z - PAD_T / 2))
-        leg = box(PAD_X, 30.0, PAD_TOP_Z - FRAME_Z + 5,
-                  tr(0, -R_CORNER + 2, (PAD_TOP_Z + FRAME_Z - 5) / 2))
+        # опора пада: сплошной массив от ядра узла (FRAME_Z) до низа пада —
+        # НЕ висит, а стоит на теле узла; ширина = ширина пада
+        leg = box(PAD_X, 34.0, PAD_TOP_Z - FRAME_Z + HUB_R,
+                  tr(0, -R_CORNER + 4, (PAD_TOP_Z - PAD_T + FRAME_Z - HUB_R) / 2))
+        # две косынки-клина по бокам (жёсткость + опора при печати)
+        for sx in (-1, 1):
+            gus = box(6, 40, PAD_TOP_Z - FRAME_Z + HUB_R,
+                      tr(sx * (PAD_X / 2 - 3), -R_CORNER + 6,
+                         (PAD_TOP_Z - PAD_T + FRAME_Z - HUB_R) / 2))
+            part = part.union(gus)
         part = part.union(pad).union(leg)
         for sx in (-1, 1):
             for sy in (-1, 1):
