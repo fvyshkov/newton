@@ -396,12 +396,14 @@ def corner_node(ang, drive=False):
     riser = cyl(GLIDE_RISER_D / 2, (FRAME_Z + 4) - (GLIDE_BOTTOM_Z + 3), seg=48,
                 T=tr(gx, gy, ((GLIDE_BOTTOM_Z + 3) + (FRAME_Z + 4)) / 2))
     part = part.union(glide).union(riser)
-    # M3 сквозное + конус зенковки, открытый ВНИЗ на плоском лице (z=GLIDE_BOTTOM_Z)
-    cuts.append(cyl(GLIDE_M3_CLR / 2, plate_h + 8, seg=24,
-                    T=tr(gx, gy, (GLIDE_BOTTOM_Z + plate_top) / 2)))
-    csk = trimesh.creation.cone(radius=GLIDE_CSK_D / 2, height=GLIDE_CSK_H, sections=32)
-    csk.apply_transform(tr(gx, gy, GLIDE_BOTTOM_Z))  # широкое основание на низ, острие вверх
-    cuts.append(csk)
+    # Крепёж тефлона — НЕ через скользящую грань! Низ лапы (z=GLIDE_BOTTOM_Z)
+    # остаётся ПЛОСКИМ и ЧИСТЫМ (на него клеится тефлон-пятак: скотч 3M VHB
+    # или контактный клей по зашкуренному тефлону). Опционально винт СВЕРХУ:
+    # глухое M3-отверстие из тела лапы ВНИЗ, НЕ доходя до плоского лица на 1.5мм
+    # (винт входит в тефлон снизу через глухое, скользящую грань не пробивает).
+    hole_h = plate_h - 1.5                         # глухое: не доходит до низа
+    cuts.append(cyl(GLIDE_M3_CLR / 2, hole_h, seg=24,
+                    T=tr(gx, gy, plate_top - hole_h / 2)))
 
     if cuts:
         part = part.difference(cuts)
