@@ -274,7 +274,10 @@ R_CORNER = 210
 R_ARM_OUT = 285
 R_FOOT = 280
 RING_Z = 50            # ring segments occupy z=50..60, track top = 60
-FRAME_Z = 75           # tube axis height of the rotating frame
+# FRAME_Z raised 75→82 so the corner nodes ride on 3 flat GLIDE PADS over the ring
+# track: pad flat bottom = track_top(60)+teflon(3)=63; node/clamp bottom now
+# FRAME_Z−CLAMP_OD/2 ≈ 66.8 (clears the track by ~6.8, only the 3 teflon pads touch).
+FRAME_Z = 82           # tube axis height of the rotating frame (was 75; +7 for glide pads)
 WHEEL_X = 170          # wheel mid-planes at x=±170 (outer-outer ≈ 360)
 ALT_AXIS = (WHEEL_X, 0.0, 590.0)
 # APEX_Z lowered so the cross tube + apex nodes sit BELOW the Ø200 wheel rim bottom
