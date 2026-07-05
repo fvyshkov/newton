@@ -130,8 +130,8 @@ PINION_CLR_D = 40.0     # вертикальный проём под шесте�
 # лапа с ПЛОСКИМ низом на z=GLIDE_BOTTOM_Z=63 (= верх дорожки 60 + тефлон 3): рама
 # опирается на 3 такие лапы (тефлон клеится/прикручивается к плоскому низу). Середины
 # хорд (R105) и центр (ось M10) — БЕЗ падов.
-GLIDE_X = 26.0          # лапа: размер по X (после разворота — поперёк), мм
-GLIDE_Y = 30.0          # лапа: размер по Y, мм  (26×30 = 780 мм² плоской опоры)
+GLIDE_RAD = 15.0        # лапа ПОПЕРЁК дорожки (радиально) — ≤18 (влезть в паз венца)
+GLIDE_TAN = 22.0        # лапа ВДОЛЬ дорожки (тангенциально), мм. = размер тефлон-пятака
 GLIDE_BOTTOM_Z = 63.0   # мировой z ПЛОСКОГО низа лапы = дорожка(60) + тефлон(3)
 GLIDE_RISER_D = 14.0    # шейка-стойка лапа→ядро (жирная сварка ниже бора трубы)
 GLIDE_M3_CLR = 3.4      # сквозное M3 под винт тефлона (или просто клей)
@@ -391,8 +391,11 @@ def corner_node(ang, drive=False):
     gx, gy = float(node[0]), float(node[1])
     plate_top = FRAME_Z - DRILL_D / 2.0 - 1.0        # ниже горизонтального бора
     plate_h = plate_top - GLIDE_BOTTOM_Z
-    glide = box(GLIDE_X, GLIDE_Y, plate_h,
-                tr(gx, gy, (GLIDE_BOTTOM_Z + plate_top) / 2))
+    # площадка = размер тефлон-пятака (GLIDE_RAD×GLIDE_TAN), повёрнута по РАДИУСУ:
+    # узкая сторона (RAD=15) поперёк дорожки → влезает в паз венца (тело 18мм)
+    glide = box(GLIDE_RAD, GLIDE_TAN, plate_h)
+    glide.apply_transform(trimesh.transformations.rotation_matrix(math.radians(ang), [0, 0, 1]))
+    glide.apply_translation([gx, gy, (GLIDE_BOTTOM_Z + plate_top) / 2])
     riser = cyl(GLIDE_RISER_D / 2, (FRAME_Z + 4) - (GLIDE_BOTTOM_Z + 3), seg=48,
                 T=tr(gx, gy, ((GLIDE_BOTTOM_Z + 3) + (FRAME_Z + 4)) / 2))
     part = part.union(glide).union(riser)
