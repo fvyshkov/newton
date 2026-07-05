@@ -175,6 +175,10 @@ def tr(x, y, z):
     return M
 
 
+def rotx(deg):
+    return trimesh.transformations.rotation_matrix(math.radians(deg), [1, 0, 0])
+
+
 def hexprism(af, h, T=None):
     """Шестигранная призма «под ключ» af (across flats), ось Z."""
     from shapely.geometry import Polygon
@@ -334,27 +338,14 @@ def corner_node(ang, drive=False):
 
     cuts = []
     if drive:
-        pad = box(PAD_X, PAD_Y, PAD_T, tr(0, PAD_CTR_Y, PAD_TOP_Z - PAD_T / 2))
-        # опора пада: сплошной массив от ядра узла (FRAME_Z) до низа пада —
-        # НЕ висит, а стоит на теле узла; ширина = ширина пада
-        leg = box(PAD_X, 34.0, PAD_TOP_Z - FRAME_Z + HUB_R,
-                  tr(0, -R_CORNER + 4, (PAD_TOP_Z - PAD_T + FRAME_Z - HUB_R) / 2))
-        # две косынки-клина по бокам (жёсткость + опора при печати)
+        # ПАД ПРИВОДА ВЫНЕСЕН в отдельную деталь Rocker_az_drive_bracket.
+        # Здесь узел 270° = ЧИСТЫЙ угол (как 17/18), плюс МАЛЕНЬКАЯ плоская
+        # площадка с 2×M4 на теле ядра — к ней болтами крепится кронштейн привода.
+        boss = box(30, 12, 20, tr(0, -R_CORNER + 6, FRAME_Z))
+        part = part.union(boss)
         for sx in (-1, 1):
-            gus = box(6, 40, PAD_TOP_Z - FRAME_Z + HUB_R,
-                      tr(sx * (PAD_X / 2 - 3), -R_CORNER + 6,
-                         (PAD_TOP_Z - PAD_T + FRAME_Z - HUB_R) / 2))
-            part = part.union(gus)
-        part = part.union(pad).union(leg)
-        for sx in (-1, 1):
-            for sy in (-1, 1):
-                hx, hy = sx * M4_DX / 2, PAD_CTR_Y + sy * M4_DY / 2
-                cuts.append(cyl(M4_CLR / 2, PAD_T + 2, seg=24,
-                                T=tr(hx, hy, PAD_TOP_Z - PAD_T / 2)))
-                cuts.append(hexprism(M4_NUT_AF, M4_NUT_DEEP + 0.5,
-                                     T=tr(hx, hy, PAD_TOP_Z - PAD_T
-                                          + M4_NUT_DEEP / 2 - 0.25)))
-        cuts.append(cyl(PINION_CLR_D / 2, 200, seg=48, T=tr(0, -PINION_R, 60)))
+            cuts.append(cyl(M4_CLR / 2, 16, seg=24,
+                            T=tr(sx * 10, -R_CORNER + 6, FRAME_Z) @ rotx(90)))
 
     if cuts:
         part = part.difference(cuts)

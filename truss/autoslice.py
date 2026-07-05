@@ -65,25 +65,36 @@ def main():
     outdir.mkdir(parents=True, exist_ok=True)
     tmp = Path(tempfile.mkdtemp(prefix="autoslice_"))
 
-    # 0. посадка на стол: каждый STL принудительно опускается до z=0
-    #    (защита от «висящих в воздухе» моделей и паразитных поддержек)
-    import trimesh
+    # 0. посадка на стол (z=0) + РАССТАНОВКА ПО СЕТКЕ с зазором
+    #    (авто-arrange BambuStudio кладёт детали внахлёст → конфликт; раскладываем
+    #    сами по grid, центрируя каждую в свою ячейку, и отключаем --arrange)
+    import trimesh, math
+    meshes = [trimesh.load(str(Path(s).resolve())) for s in args.stls]
+    n = len(meshes)
+    BED_CX, BED_CY = 175.0, 160.0        # центр стола H2D (350×320)
+    cols = math.ceil(math.sqrt(n))
+    cell = max(max((m.bounds[1] - m.bounds[0])[:2]) for m in meshes) + 12.0
+    rows = math.ceil(n / cols)
+    if cols * cell > 350 or rows * cell > 320:
+        sys.exit(f"НЕ ВЛЕЗЕТ: сетка {cols}×{rows}×{cell:.0f}мм > стол 350×320. "
+                 f"Меньше деталей на плиту.")
     grounded = []
-    for i, s in enumerate(args.stls):
-        m = trimesh.load(str(Path(s).resolve()))
-        dz = -m.bounds[0][2]
-        if abs(dz) > 1e-6:
-            m.apply_translation([0, 0, dz])
-            print(f"   {Path(s).name}: посажен на стол (dz={dz:+.2f})")
-        g = tmp / f"grounded_{i:02d}_{Path(s).stem}.stl"
+    for i, (s, m) in enumerate(zip(args.stls, meshes)):
+        c = (m.bounds[0] + m.bounds[1]) / 2.0
+        row, col = divmod(i, cols)
+        cx = BED_CX + (col - (cols - 1) / 2.0) * cell
+        cy = BED_CY + (row - (rows - 1) / 2.0) * cell
+        m.apply_translation([cx - c[0], cy - c[1], -m.bounds[0][2]])
+        g = tmp / f"grid_{i:02d}_{Path(s).stem}.stl"
         m.export(g)
         grounded.append(str(g))
+    print(f"   раскладка: {n} дет., сетка {cols}кол, ячейка {cell:.0f}мм")
 
-    # 1. проект из STL
+    # 1. проект из STL (--arrange 0: не трогать нашу сетку)
     code, errs = run([STUDIO,
                       "--load-settings", f"{MACHINE};{PROCESS}",
                       "--load-filaments", str(FILAMENT),
-                      "--arrange", "1", "--orient", "0",
+                      "--arrange", "0", "--orient", "0",
                       "--export-3mf", "raw.3mf", "--outputdir", str(tmp)]
                      + grounded, tmp)
     if not (tmp / "raw.3mf").exists():
