@@ -266,9 +266,17 @@ def finish(mesh, name):
     parts = mesh.split(only_watertight=False)
     if len(parts) > 1:
         mesh = max(parts, key=lambda m: m.volume)
+    # убрать вырожденные грани (нулевой площади) — от них 0-см³ «тела»/дефекты
+    mesh.update_faces(mesh.nondegenerate_faces())
+    mesh.remove_unreferenced_vertices()
+    mesh.merge_vertices(digits_vertex=5)
     if not mesh.is_watertight:
         trimesh.repair.fill_holes(mesh)
         mesh.fix_normals()
+    # финальная проверка: ровно одно тело
+    fin = mesh.split(only_watertight=False)
+    if len(fin) > 1:
+        mesh = max(fin, key=lambda m: m.volume)
     out = OUTDIR / f"{name}.stl"
     mesh.export(out)
     bb = mesh.bounds
