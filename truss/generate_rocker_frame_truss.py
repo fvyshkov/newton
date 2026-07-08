@@ -337,13 +337,19 @@ def endpoints_for_corner(ang):
 
 
 # ============================ 1/2. УГЛОВОЙ УЗЕЛ ============================
-def corner_node(ang, drive=False):
+def corner_node(ang, drive=False, drive_window=True, drive_pad=True,
+                extra_solids=None, extra_cuts=None, name=None, bed=True):
     """(v3) Минимальный угловой узел: ядро-сфера + 2 хорды (щель вверх) +
     нога(и) башни (щель наружу). БЕЗ радиали. drive=True → узел 270°:
     + минимальный пад 4×M4 под Rocker_swing_base и вертикальный проём Ø40 под
-    шестерню. Ничего лишнего."""
+    шестерню. Ничего лишнего.
+    Хуки (для варианта с встроенной мотор-кареткой, generate_rocker_corner_drive_motor):
+    drive_window=False — не резать сквозной Ø40 проём; drive_pad=False — НЕ строить
+    пад 4×M4 (в мотор-варианте мотор крепится на свой фланец, старый swing-пад лишний);
+    extra_solids/extra_cuts — доп. тела/вырезы в МИРОВЫХ координатах ДО позы печати;
+    name — имя STL."""
     node, eps = endpoints_for_corner(ang)
-    name = "Rocker_corner_drive" if drive else f"Rocker_corner_node_{int(ang)}"
+    name = name or ("Rocker_corner_drive" if drive else f"Rocker_corner_node_{int(ang)}")
 
     part = trimesh.creation.icosphere(subdivisions=ICO_SUB, radius=HUB_R)
     part.apply_translation(node)
@@ -362,7 +368,7 @@ def corner_node(ang, drive=False):
         sockets.append((tag, node.copy(), d, off + CLAMP_H))
 
     cuts = []
-    if drive:
+    if drive and drive_pad:
         # Пад привода МОНОЛИТНО с узлом (надёжнее отдельной детали): площадка
         # 4×M4 под Rocker_swing_base + проём под шестерню, на опоре-массиве от
         # ядра (не висит). Обломки boolean вычищаются в finish() (fill_holes).
@@ -383,6 +389,7 @@ def corner_node(ang, drive=False):
                 cuts.append(hexprism(M4_NUT_AF, M4_NUT_DEEP + 0.5,
                                      T=tr(hx, hy, PAD_TOP_Z - PAD_T
                                           + M4_NUT_DEEP / 2 - 0.25)))
+    if drive and drive_window:
         cuts.append(cyl(PINION_CLR_D / 2, 200, seg=48, T=tr(0, -PINION_R, 60)))
 
     # --- ГЛАЙД-ПАД (все 3 угла): плоская лапа под ядром, ПЛОСКИЙ низ на z=63 ---
@@ -414,6 +421,11 @@ def corner_node(ang, drive=False):
     cuts.append(cyl(GLIDE_M3_CLR / 2, hole_h, seg=24,
                     T=tr(gx, gy, plate_top - hole_h / 2)))
 
+    if extra_solids:
+        for _s in extra_solids:
+            part = part.union(_s)
+    if extra_cuts:
+        cuts.extend(extra_cuts)
     if cuts:
         part = part.difference(cuts)
 
@@ -421,9 +433,11 @@ def corner_node(ang, drive=False):
     ok = tube_fit_test(part, sockets, name)
     assert ok, f"{name}: tube-fit FAIL — палка не влезет"
 
-    # поза печати: развернуть вокруг Z (наружу-радиаль угла → +X)
-    yaw = trimesh.transformations.rotation_matrix(math.radians(-ang), [0, 0, 1])
-    part = to_bed(part, yaw)
+    # поза печати: развернуть вокруг Z (наружу-радиаль угла → +X).
+    # bed=False — оставить в МИРОВЫХ координатах (для рендера сборки).
+    if bed:
+        yaw = trimesh.transformations.rotation_matrix(math.radians(-ang), [0, 0, 1])
+        part = to_bed(part, yaw)
     return finish(part, name)
 
 
