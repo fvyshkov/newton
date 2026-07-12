@@ -4,3 +4,6 @@
 __pycache__/
 .playwright-mcp/
 result.json
+
+# python virtualenvs (CAD toolchain — never commit, ~400MB OCP)
+.venv*/

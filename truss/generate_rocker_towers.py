@@ -301,7 +301,17 @@ def _apex_slit(key, d):
     return h / np.linalg.norm(h)
 
 
-def rocker_tower_apex(side=+1, name="Rocker_tower_apex_R"):
+# --- Площадка энкодера высоты на R-вышке (интерфейс к build123d-arm'у) ---
+# Плоская бонка СНАРУЖИ диска (мир x 174..188, z 458..474 — ниже обода z490, чистая
+# по y=0: ролики люльки на y=±67). Верх плоский на мир z=474; 2×M4 самонарез вниз.
+# Энкодер-arm (build123d, отдельный STEP) садится сюда, слоты дают регулировку зазора.
+ENC_PAD_TOP_Z = 14.0        # верх площадки в build-кадре (мир 460+14=474)
+ENC_PAD = dict(cx=11.0, y_half=14.0, x_half=7.0, z0=-2.0)   # мир x[174,188]
+ENC_BOLT_DY = 10.0          # разнос 2×M4 по Y
+ENC_TAP = 3.5               # Ø самонарез M4 в PETG
+
+
+def rocker_tower_apex(side=+1, name="Rocker_tower_apex_R", enc_pad=False):
     """Вершина: 3 хомута-цилиндра из общего центра + ядро-шар. Прорези: cross
     ВВЕРХ, две ноги — радиально наружу. STAGGER: две ноги всего ~42° апарт → их
     боры пересекались и «палка не влезала». ЗАДНЮЮ ногу выносим вдоль её оси на
@@ -309,7 +319,9 @@ def rocker_tower_apex(side=+1, name="Rocker_tower_apex_R"):
     по оси), а гэп от ядра до вынесенного воротника заполняем струтом-цилиндром.
     Затем СКВОЗНАЯ расточка всех трёх боров Ø22.4 через ядро → каждая труба входит
     в ПУСТОЙ бор на полный грип (tube-fit PASS). Собирается с вершиной в НАЧАЛЕ
-    координат; печатная поза — ось cross-хомута вертикально. L = зеркало R по X."""
+    координат; печатная поза — ось cross-хомута вертикально. L = зеркало R по X.
+    enc_pad=True (только R): добавляет плоскую площадку 2×M4 СНАРУЖИ диска под
+    энкодер-arm высотной оси (см. generate_alt_encoder_arm.py, build123d)."""
     _, dirs, _ = _apex_dirs(side)
     # сокеты: (label, origin, dir, entry) — entry = вынос входного торца по оси
     offs = {"cross": 0.0, "leg": 0.0, "rear": LEG_STAGGER}
@@ -324,10 +336,20 @@ def rocker_tower_apex(side=+1, name="Rocker_tower_apex_R"):
         if off > 0.5:   # струт ядро→вынесенный воротник (сваривает, потом расточится)
             parts.append(axis_cyl(d, -8.0, off + 8.0, CLAMP_OD, seg=SEG))
         sockets.append((key, np.zeros(3), d, off + h))
+    if enc_pad:
+        p = ENC_PAD
+        parts.append(boxab(p["cx"] - p["x_half"], p["cx"] + p["x_half"],
+                           -p["y_half"], p["y_half"], p["z0"], ENC_PAD_TOP_Z))
     part = uni(parts)
     part = drill_bores(part, sockets)          # сквозной пустой бор на каждый сокет
     ok = tube_fit_test(part, sockets, name)
     assert ok, f"{name}: tube-fit FAIL — палка не влезет"
+    if enc_pad:                                # 2×M4 самонарез сверху вниз в площадку
+        taps = [cyl(ENC_TAP / 2, ENC_PAD_TOP_Z - ENC_PAD["z0"],
+                    T=tr(ENC_PAD["cx"], sy * ENC_BOLT_DY,
+                         (ENC_PAD_TOP_Z + ENC_PAD["z0"]) / 2), seg=24)
+                for sy in (+1, -1)]
+        part = dif(part, taps)
     # ПОЗА ПЕЧАТИ: ось cross-хомута → вертикаль (её бор печатается без поддержки)
     pose = trimesh.geometry.align_vectors(dirs["cross"], [0.0, 0.0, 1.0])
     return finish(part, name, pose=pose)
@@ -422,6 +444,70 @@ def rocker_cradle(side=+1, name="Rocker_cradle_R"):
     return finish(body, name)
 
 
+# ==================== 2b. РУЧНАЯ ЛЮЛЬКА НА ТЕФЛОНЕ (без роликов/мотора) ====================
+def rocker_cradle_manual(side=+1, name="Rocker_cradle_R"):
+    """ЕДИНОЕ седло колеса Ø200 (работает и руками, и под GoTo). Опора-V:
+      • +Y — ТЕФЛОН-пятак (касателен ободу R100 на +35°): трение держит любую
+        высоту РУКАМИ (классический доб), карман PTFE 16×18 врезка 2 мм, губки;
+      • −Y — ВЕДУЩИЙ фрикц-ролик Ø35 на валу Ø8 (вилка, наруж. ухо = посадка
+        привода 2×M4): в ручном свободно крутится (опора), в GoTo его вращает
+        NEMA17 (Rocker_alt_drive) → трением катит колесо = высота.
+    Апгрейд ручной→GoTo без смены седла: прикрутить alt_drive + ролик + магнит
+    в центр колеса + энкодер-arm на вышку. Хомут/седло/вебы/бэкбон/антиподъём —
+    от базовой люльки. L = зеркало (mirror_z)."""
+    rx, roll_xl, bdc_xl, tdc_xl, fric_zw = _cradle_locals()
+    ch = 40.0
+    UP = np.array([-1.0, 0.0, 0.0]); ZL = np.array([0.0, 0.0, 1.0]); Z_IN = -12.0
+    clamp_out = -46.0
+    C_ORIG = (0.0, 0.0, clamp_out - ch)
+    parts = [tc.place_clamp(ch, C_ORIG, tube_dir=ZL, slit_dir=UP)]
+    parts.append(boxab(-20, 16, -34, 34, -70, -44))                       # седло
+    for sy in (+1, -1):
+        parts.append(boxab(roll_xl - 8, -2, sy * 25 - 8, sy * 25 + 8, -68, -8))   # вебы
+    parts.append(boxab(roll_xl - 8, roll_xl + 8, -(ROLL_Y + 11), ROLL_Y + 11, -18, -8))  # бэкбон (z_l<диска)
+
+    # --- ОПОРА: +Y ТЕФЛОН-ПЯТАК (держит высоту руками), −Y ВЕДУЩИЙ ФРИКЦ-РОЛИК (привод GoTo) ---
+    axis_xl = bdc_xl - WHEEL_R                       # −130  ось колеса (x_l)
+    rad = math.radians(ROLL_ANG)                     # 35°
+    pockets = []
+    roller_bores = []
+    # +Y: тефлон-пятак, касательный к ободу R100 на +35° (трение держит трубу рукой)
+    cyy = WHEEL_R * math.sin(rad)                    # +57.4
+    rvec = np.array([math.cos(rad), math.sin(rad), 0.0])
+    contact = np.array([axis_xl + WHEEL_R * math.cos(rad), cyy, 0.0])
+    Rp = rotz(ROLL_ANG)
+    pad = box(26, 22, 20, T=Rp); pad.apply_translation(contact + rvec * 13.0)
+    parts.append(pad)
+    parts.append(boxab(roll_xl - 9, roll_xl + 9, 57 - 11, 57 + 11, -8, 11))       # струт пятак↔бэкбон
+    for sz in (+1, -1):                              # губки осевого удержания обода
+        lip = box(12, 22, 2.5, T=Rp)
+        lip.apply_translation(contact - rvec * 1.0 + np.array([0.0, 0.0, sz * 10.0]))
+        parts.append(lip)
+    pk = box(3.0, 16, 18, T=Rp); pk.apply_translation(contact + rvec * 0.5)       # карман PTFE (врезка 2мм)
+    pockets.append(pk)
+    # −Y: ВЕДУЩИЙ фрикц-ролик Ø35 (вилка 608/вал Ø8 вдоль +Z_l; в ручном свободен, в GoTo — от мотора)
+    yc = -ROLL_Y
+    parts.append(boxab(roll_xl - 11, roll_xl + 11, yc - 11, yc + 11, -14, -2))    # внутр. ухо
+    parts.append(boxab(roll_xl - 11, roll_xl + 11, yc - 17, yc + 17, 2, 14))      # наруж. ухо (=посадка привода 2×M4)
+    roller_bores.append(cyl(SHAFT_D / 2 + 0.1, 44, T=tr(roll_xl, yc, 5), seg=32))
+
+    # --- АНТИПОДЪЁМ над TDC (как у роликовой) ---
+    for sy in (+1, -1):
+        parts.append(boxab(tdc_xl - 8, roll_xl + 4, sy * 42 - 7, sy * 42 + 7, Z_IN - 4, Z_IN + 4))
+    parts.append(boxab(tdc_xl - 8, tdc_xl + 6, -50, 50, Z_IN - 4, Z_IN + 4))
+    parts.append(boxab(tdc_xl - 11, tdc_xl - 1, -13, 13, -(DISC_HALF + 3), DISC_HALF + 3))
+
+    body = uni(parts)
+    cuts = [cyl(tc.BORE / 2, 100, T=tr(0, 0, -42), seg=48)] + pockets + roller_bores  # бор cross + PTFE + ось ролика
+    for sy in (+1, -1):   # 2×M4 посадки привода (GoTo) в наружном −Y ухе
+        cuts.append(cyl(M4_CLR / 2, 18, T=tr(roll_xl, -ROLL_Y + sy * 13.5, 8), seg=20))
+    body = dif(body, cuts)
+    tube_fit(body, C_ORIG, ZL, ch, name)
+    if side < 0:
+        body = mirror_z(body)
+    return finish(body, name)
+
+
 # ============================ 3. ФРИКЦ. ПРИВОД ВЫСОТЫ ============================
 # Та же локальная система (+Z_l = мировая X). Обод BDC = локально (+40,0,0);
 # центр фрикц. ролика опущен на FRIC_R «вниз» (мир. −Z = лок. +X) → (+40+R,0,0).
@@ -488,10 +574,10 @@ def main():
     print(f"  длины труб (из координат): нога(перед)→apex {lensR['leg']:.1f}мм, "
           f"нога(зад,270°)→apex {lensR['rear']:.1f}мм, cross {2*WHEEL_X:.1f}мм")
     print(f"  хомут: бор Ø{tc.BORE_D}, воротник Ø{CLAMP_OD}мм — переиспользован во всех сокетах")
-    rocker_tower_apex(+1, "Rocker_tower_apex_R")
+    rocker_tower_apex(+1, "Rocker_tower_apex_R", enc_pad=True)   # +площадка энкодера
     rocker_tower_apex(-1, "Rocker_tower_apex_L")
-    rocker_cradle(+1, "Rocker_cradle_R")
-    rocker_cradle(-1, "Rocker_cradle_L")
+    rocker_cradle_manual(+1, "Rocker_cradle_R")   # ЕДИНОЕ седло: +Y тефлон / −Y ведущий ролик
+    rocker_cradle_manual(-1, "Rocker_cradle_L")
     rocker_alt_drive("Rocker_alt_drive")
     rocker_alt_roller("Rocker_alt_roller")
     print(f"\nГотово → {OUTDIR}")
