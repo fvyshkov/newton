@@ -307,57 +307,96 @@ def ring_fixed_seg():
     return finish(part, "az2_ring_fixed_seg")
 
 
-# ============================ 2. ВРАЩАЮЩЕЕСЯ КОЛЬЦО ============================
-def ring_rot_seg():
-    """Сегмент 90° вращающегося кольца: тело z9..17 + зубья наружу z9..19.
-    В дне — карманы тефлоновых пятачков (скользят по дорожке неподв. кольца).
-    Сверху — гнездо стойки (бобышка Ø30, бор Ø22.6). На внутр. крае — бобышка
-    под винт спайдера. Внутр. борт R185.5 трётся о буртик неподв. кольца."""
+# ============================ 2. ВРАЩАЮЩЕЕСЯ КОЛЬЦО (венец) ============================
+# --- наклонные гнёзда ног башен: хомут Ø30 под трубу Ø22, целит в апекс ---
+# Направление ноги = (апекс − угол). Апексы неподвижны (±170,0). Угол на R_LEG —
+# ВНУТРЬ от зубьев (R217.5), чтобы хомут Ø30 не трогал зубья/шестерню (нога входит
+# в апекс ~1.3° мимо расчёта под R210 — съедается люфтом трубы).
+R_LEG = 201.0
+APEX_XY = {"R": (170.0, 0.0), "L": (-170.0, 0.0)}
+CORNER_Z_V1, APEX_Z_V1 = 82.0, 460.0        # только для расчёта НАКЛОНА
+LEG_COLLAR_D = 30.0
+LEG_BORE = 22.6
+LEG_H = 44.0
+LEG_SET = 3.4
+_c30, _s30 = math.cos(math.radians(30)), math.sin(math.radians(30))
+# 4 РАЗНЫХ сегмента: (имя, центр C, [(base_x, base_y, apex_side)])
+ROT_CFGS = [
+    ("az2_ring_rot_A_leg30",  0.0,   [(R_LEG * _c30,  R_LEG * _s30, "R")]),   # угол 30 → apexR
+    ("az2_ring_rot_B_plain",  90.0,  []),                                     # без ног
+    ("az2_ring_rot_C_leg150", 180.0, [(R_LEG * _c30, -R_LEG * _s30, "L")]),   # угол 150 (лок −30) → apexL
+    ("az2_ring_rot_D_leg270", 270.0, [(R_LEG, 12.0, "R"), (R_LEG, -12.0, "L")]),  # ведущий: 2 ноги (боры разведены)
+]
+
+
+def _rotz3(deg):
+    a = math.radians(deg); c, s = math.cos(a), math.sin(a)
+    return np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
+
+
+def cyl_along(r, L, base, d, seg=SEG_CIRC):
+    """Цилиндр r×L, ось вдоль единичного d, один торец в base."""
+    d = np.asarray(d, float); d = d / np.linalg.norm(d)
+    T = trimesh.geometry.align_vectors([0.0, 0.0, 1.0], d)
+    c = trimesh.creation.cylinder(radius=r, height=L, sections=seg)
+    c.apply_transform(T)
+    c.apply_translation(np.asarray(base, float) + d * (L / 2.0))
+    return c
+
+
+def _leg_dir_local(C, base_xy, side):
+    """Единичное направление ноги в ЛОКАЛЬНОЙ рамке сегмента (центр C→мир)."""
+    cw = _rotz3(C) @ np.array([base_xy[0], base_xy[1], CORNER_Z_V1])
+    aw = np.array([APEX_XY[side][0], APEX_XY[side][1], APEX_Z_V1])
+    dl = _rotz3(-C) @ (aw - cw)
+    return dl / np.linalg.norm(dl)
+
+
+def ring_rot_seg(name, C, legs):
+    """Сегмент 90° венца (вращается): зубья наружу + тефлон-карманы в дне +
+    бобышка спайдера + НАКЛОННЫЕ гнёзда ног (0/1/2 по конфигу). Внутр. борт
+    R185.5 центрируется буртиком нижнего кольца. 4 сегмента РАЗНЫЕ."""
     half = SEG_ANG / 2.0
-    # строим в локальной рамке с телом z0..8, потом поднимаем на ROT_Z0
-    rim = ring_arc_teeth(-half, TEETH_PER_SEG, RIM_H)              # z0..10
-    body = extrude(sector_annulus(ROT_R_IN, BODY_R_OUT, -half, half), BODY_T)  # z0..8
+    rim = ring_arc_teeth(-half, TEETH_PER_SEG, RIM_H)
+    body = extrude(sector_annulus(ROT_R_IN, BODY_R_OUT, -half, half), BODY_T)
     part = rim.union(body)
     part = lap_joint(part, 0.0, BODY_T)
 
-    # гнездо стойки по центру сегмента (angle 0 локально), на R=POST_R
-    boss = cyl(POST_BOSS_D / 2, BODY_T + POST_BOSS_H,
-               T=tr(POST_R, 0, (BODY_T + POST_BOSS_H) / 2))
-    part = part.union(boss)
-
-    # бобышка спайдера — на ТЕЛЕ, смещена от центра сегмента (там гнездо стойки).
-    # 4 таких (по 1 на сегмент) держат крест спайдера; внутр. борт НЕ рвёт.
+    # бобышка спайдера (на теле, смещена от центра)
     spd_a = math.radians(SPD_MOUNT_ANG)
     spd_x, spd_y = SPD_MOUNT_R * math.cos(spd_a), SPD_MOUNT_R * math.sin(spd_a)
-    spd = cyl(SPD_BOSS_D / 2, BODY_T, T=tr(spd_x, spd_y, BODY_T / 2))
-    part = part.union(spd)
+    part = part.union(cyl(SPD_BOSS_D / 2, BODY_T, T=tr(spd_x, spd_y, BODY_T / 2)))
 
-    cuts = []
-    # бор гнезда стойки (глухой снизу — трубка упирается)
-    cuts.append(cyl(POST_BORE / 2, POST_BOSS_H + BODY_T - 2,
-                    T=tr(POST_R, 0, 2 + (POST_BOSS_H + BODY_T - 2) / 2)))
-    # радиальный M4-стопор трубки
-    ss = cyl(POST_SET / 2, POST_BOSS_D + 8, seg=24)
-    ss.apply_transform(roty(90))
-    ss.apply_translation([POST_R, 0, BODY_T + POST_BOSS_H - 8])
-    cuts.append(ss)
-    # винт спайдера (самонарез M3) в бобышку сверху
+    leg_cuts = []
+    for (bx, by, side) in legs:
+        d = _leg_dir_local(C, (bx, by), side)
+        base = np.array([bx, by, BODY_T])                     # низ хомута = верх тела
+        part = part.union(cyl_along(LEG_COLLAR_D / 2, LEG_H + 6, base - d * 6, d))
+        # БОР от верха тела (z=BODY_T) ВВЕРХ — НЕ сквозь низ (скольз. грань цела).
+        leg_cuts.append(cyl_along(LEG_BORE / 2, LEG_H + 12, base, d, seg=48))
+        h = np.array([d[0], d[1], 0.0]); h = h / np.linalg.norm(h)   # горизонт. наружу
+        ss = base + d * (LEG_H - 8)
+        leg_cuts.append(cyl_along(LEG_SET / 2, LEG_COLLAR_D + 8,
+                                  ss - h * (LEG_COLLAR_D / 2 + 4), h, seg=24))
+
+    cuts = list(leg_cuts)
     cuts.append(cyl(SPD_TAP / 2, BODY_T + 1, seg=24, T=tr(spd_x, spd_y, BODY_T / 2)))
-    # тефлоновые пятачки в дне: те, что попадают в этот сегмент (±45°)
     pad_step = 360.0 / PAD_N
     for k in range(PAD_N):
-        ang = -180.0 + (k + 0.5) * pad_step   # нумерация вокруг; берём попавшие в сектор
+        ang = -180.0 + (k + 0.5) * pad_step
         if -half + 1 < ang < half - 1:
             a = math.radians(ang)
             cuts.append(cyl(PAD_D / 2, PAD_DEPTH * 2, seg=32,
                             T=tr(PAD_R * math.cos(a), PAD_R * math.sin(a), 0)))
     part = part.difference(cuts)
+    # ОБРЕЗАТЬ всё ниже нижней плоскости (наклонный хомут нижним краем уходит под z0)
+    if legs:
+        part = part.intersection(box(1000, 1000, 200, T=tr(0, 0, 100)))
 
-    # печать телом на стол (z0); в сборке кольцо стоит на ROT_Z0=9 (см. превью)
     part.apply_transform(rotz(-LAP_ANG / 2.0))
     bb = part.bounds
     part.apply_translation([-(bb[0, 0] + bb[1, 0]) / 2, -(bb[0, 1] + bb[1, 1]) / 2, 0])
-    return finish(part, "az2_ring_rot_seg")
+    return finish(part, name)
 
 
 # ============================ 3. СПАЙДЕР МАГНИТА ============================
@@ -535,7 +574,8 @@ def main():
     print(f"  привод: 16T прямой {RING_TEETH/PIN_TEETH:.0f}:1 (обычный NEMA17, вал Ø5), "
           f"межосевое {CENTER_DIST:.0f}, пинион z8..18 в зубьях z9..19")
     ring_fixed_seg()
-    ring_rot_seg()
+    for nm, C, legs in ROT_CFGS:
+        ring_rot_seg(nm, C, legs)
     magnet_spider()
     encoder_column()
     motor_pedestal()

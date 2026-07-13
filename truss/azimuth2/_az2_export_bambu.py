@@ -15,6 +15,10 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 def load_centered(name):
     m = trimesh.load(SRC / f"{name}.stl", process=False)
+    # STL = «суп треугольников» (вершины продублированы на каждый треугольник).
+    # Без слияния 3mf наследует дубли → Bambu считает меш дырявым, чинит сам и
+    # может выкинуть слои («empty layer», «faulty mesh»). Сливаем до экспорта.
+    m.merge_vertices()
     b = m.bounds
     m.apply_translation([-(b[0][0] + b[1][0]) / 2, -(b[0][1] + b[1][1]) / 2, 0])
     return m
@@ -62,15 +66,31 @@ def ring_items(name, n=4):
     return [(name, 0, i * pt, 90.0) for i in range(n)]
 
 
+def ring_items_list(names):
+    pt = max(pitch_of(nm) for nm in names)
+    return [(names[i], 0, i * pt, 90.0) for i in range(len(names))]
+
+
 SMALL = [("az2_magnet_spider", 175, 160, 0.0),
          ("az2_encoder_column", 272, 160, 0.0),
          ("az2_motor_pedestal", 80, 160, 0.0),
          ("az2_pinion_16T_bore5", 175, 266, 0.0)]
 
+SHOES = [("az2_magnet_spider3", 165.7, 194.6, -75.0),  # хаб → (175,160), лучи 45/135/225
+         ("az2_motor_pedestal", 80, 160, 0.0),
+         ("az2_encoder_column", 272, 160, 0.0),
+         ("az2_pinion_16T_bore5", 175, 266, 0.0),
+         ("az2_shoe_C150", 145, 48, 0.0),
+         ("az2_shoe_A30", 215, 48, 0.0),
+         ("az2_shoe_D270", 295, 70, 0.0)]
+
 PLATES = {
     "plate1_ring_fixed_x4": ring_items("az2_ring_fixed_seg"),
-    "plate2_ring_rot_x4": ring_items("az2_ring_rot_seg"),
+    "plate2_venec_rot_x4": ring_items_list(
+        ["az2_ring_rot_A_leg30", "az2_ring_rot_B_plain",
+         "az2_ring_rot_C_leg150", "az2_ring_rot_D_leg270"]),
     "plate3_center_4parts": SMALL,
+    "plate4_bashmaki_center": SHOES,
 }
 
 print("Сборка файлов для Bambu H2D →", OUT.resolve())

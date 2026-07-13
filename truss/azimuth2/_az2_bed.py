@@ -15,10 +15,14 @@ MARGIN = 4
 GAP = 4.0                      # минимальный зазор между деталями, мм
 
 VOL = {"az2_ring_fixed_seg": 116, "az2_ring_rot_seg": 106, "az2_magnet_spider": 24,
-       "az2_encoder_column": 29, "az2_motor_pedestal": 56, "az2_pinion_16T_bore5": 8}
+       "az2_encoder_column": 29, "az2_motor_pedestal": 56, "az2_pinion_16T_bore5": 8,
+       "az2_shoe_A30": 28, "az2_shoe_C150": 28, "az2_shoe_D270": 47,
+       "az2_magnet_spider3": 19}
 COL = {"az2_ring_fixed_seg": "#d98a3d", "az2_ring_rot_seg": "#e0a94a",
        "az2_magnet_spider": "#7fb3d5", "az2_encoder_column": "#82c99a",
-       "az2_motor_pedestal": "#c8a2c8", "az2_pinion_16T_bore5": "#f0c040"}
+       "az2_motor_pedestal": "#c8a2c8", "az2_pinion_16T_bore5": "#f0c040",
+       "az2_shoe_A30": "#e07a7a", "az2_shoe_C150": "#e07a7a", "az2_shoe_D270": "#d05a5a",
+       "az2_magnet_spider3": "#7fb3d5"}
 
 FOOT = {}
 for f in sorted(Path("stl").glob("*.stl")):
@@ -79,6 +83,19 @@ def plate_rings(name):
     return center_on_bed(nest_stack(name, 4))
 
 
+def nest_list(names, base_rot=90.0):
+    """Нестинг РАЗНЫХ дуг (одинаковый габарит арки) стопкой; шаг = по самой широкой."""
+    pitch = 0.0
+    for nm in names:
+        A = place(nm, 0, 0, base_rot); p = 130.0
+        while p > 0:
+            if A.distance(place(nm, 0, p, base_rot)) < GAP:
+                p += 1.0; break
+            p -= 1.0
+        pitch = max(pitch, p)
+    return center_on_bed([(names[i], 0, i * pitch, base_rot) for i in range(len(names))])
+
+
 def plate_small():
     # спайдер (лучи по диагоналям) по центру; мелочь — в промежутках по осям ±X/±Y
     return [
@@ -89,13 +106,30 @@ def plate_small():
     ]
 
 
+def plate_shoes():
+    # спайдер-3луча (лучи по диагоналям после −75°); мелочь в промежутках;
+    # башмаки — нижняя полоса (свободна: лучи на 45/135/225)
+    return [
+        ("az2_magnet_spider3", 165.7, 194.6, -75.0),   # хаб → (175,160), лучи 45/135/225
+        ("az2_motor_pedestal", 80, 160, 0.0),
+        ("az2_encoder_column", 272, 160, 0.0),
+        ("az2_pinion_16T_bore5", 175, 266, 0.0),
+        ("az2_shoe_C150", 145, 48, 0.0),
+        ("az2_shoe_A30", 215, 48, 0.0),
+        ("az2_shoe_D270", 295, 70, 0.0),
+    ]
+
+
 PLATES = [
     ("Стол 1 — неподвижное кольцо ×4", plate_rings("az2_ring_fixed_seg")),
-    ("Стол 2 — вращающееся кольцо ×4", plate_rings("az2_ring_rot_seg")),
+    ("Стол 2 — венец (вращ.) ×4 РАЗНЫХ", nest_list(
+        ["az2_ring_rot_A_leg30", "az2_ring_rot_B_plain",
+         "az2_ring_rot_C_leg150", "az2_ring_rot_D_leg270"])),
     ("Стол 3 — центр/привод", plate_small()),
+    ("Стол 4 — башмаки ног + центр/привод (спайдер 3 луча)", plate_shoes()),
 ]
 
-fig, axes = plt.subplots(1, 3, figsize=(21, 8), dpi=110)
+fig, axes = plt.subplots(1, 4, figsize=(28, 8), dpi=110)
 total_g = 0
 for ax, (title, placed) in zip(axes, PLATES):
     bad = check(placed)
@@ -106,15 +140,15 @@ for ax, (title, placed) in zip(axes, PLATES):
     for (n, x, y, r) in placed:
         poly = place(n, x, y, r)
         xs, ys = poly.exterior.xy
-        ax.add_patch(MPoly(list(zip(xs, ys)), closed=True, fc=COL[n], ec="k",
-                           lw=1.2, alpha=0.9))
+        ax.add_patch(MPoly(list(zip(xs, ys)), closed=True, fc=COL.get(n, "#e0a94a"),
+                           ec="k", lw=1.2, alpha=0.9))
         for interior in poly.interiors:
             ix, iy = interior.xy
             ax.add_patch(MPoly(list(zip(ix, iy)), closed=True, fc="#f4f4f4",
                                ec="0.5", lw=0.6))
         ax.text(x, y, n.replace("az2_", "").replace("_seg", "").replace("_16T_bore5", ""),
                 ha="center", va="center", fontsize=7.5, weight="bold")
-        pg += VOL[n] * 1.27 * 0.5
+        pg += VOL.get(n, 108) * 1.27 * 0.5
     total_g += pg
     status = "✓ ок" if not bad else "⚠ " + "; ".join(bad)
     ax.set_title(f"{title}\n≈{pg:.0f} г PETG   {status}", fontsize=11, weight="bold")
