@@ -1,0 +1,4 @@
+// Скопировать в wifi_creds.h (он в .gitignore — пароль НЕ попадёт в гит)
+// и вписать свою домашнюю сеть (2.4 ГГц — ESP32 не видит 5 ГГц).
+#define HOME_SSID "MyHomeWifi"
+#define HOME_PASS "password"

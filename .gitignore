@@ -7,3 +7,7 @@ result.json
 
 # python virtualenvs (CAD toolchain — never commit, ~400MB OCP)
 .venv*/
+
+# WiFi креды прошивок — никогда не коммитить
+wifi_creds.h
+firmware/*/build/

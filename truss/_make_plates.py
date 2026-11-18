@@ -14,7 +14,10 @@ import math, numpy as np, trimesh
 from pathlib import Path
 D = Path("print_queue/verkhniy_yarus")
 
-def load(name): return trimesh.load(D / name, process=False)
+def load(name):
+    m = trimesh.load(D / name, process=False)
+    m.merge_vertices()   # STL — triangle soup; сварить вершины, иначе 3MF-экспорт даёт
+    return m              # неиндексированный меш и Bambu Studio ловит фантомные "empty layer"
 def eul(ax, ay, az):
     return trimesh.transformations.euler_matrix(math.radians(ax), math.radians(ay), math.radians(az))
 
